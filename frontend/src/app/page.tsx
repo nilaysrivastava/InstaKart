@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { createItem, getHealth, getItems, Item } from "@/lib/api";
+import { askBedrock, createItem, getHealth, getItems, Item } from "@/lib/api";
 
 const features = [
   {
@@ -29,6 +29,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [isAsking, setIsAsking] = useState(false);
 
   async function loadData() {
     try {
@@ -74,6 +77,29 @@ export default function Home() {
       setError("Failed to create item.");
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleAskBedrock(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!question.trim()) {
+      setError("Question is required.");
+      return;
+    }
+
+    try {
+      setError("");
+      setIsAsking(true);
+      setAnswer("");
+
+      const result = await askBedrock(question);
+      setAnswer(result.answer);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to get Bedrock answer.");
+    } finally {
+      setIsAsking(false);
     }
   }
 
@@ -308,6 +334,67 @@ export default function Home() {
                     </p>
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="ask-bedrock" className="mx-auto max-w-7xl px-6 py-12">
+        <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+          <form
+            onSubmit={handleAskBedrock}
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+          >
+            <p className="text-sm font-semibold uppercase tracking-wide text-[#ff9900]">
+              Amazon Bedrock Test
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-950">
+              Ask the AI Architect
+            </h2>
+            <p className="mt-3 leading-7 text-slate-600">
+              This sends your question to API Gateway, triggers Lambda, and
+              invokes Amazon Bedrock Nova Micro.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-slate-700">
+                  Question
+                </label>
+                <textarea
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  placeholder="Example: What AWS architecture should we use for a scalable hackathon prototype?"
+                  rows={5}
+                  className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-[#ff9900] focus:ring-4 focus:ring-orange-100"
+                />
+              </div>
+
+              <button
+                disabled={isAsking}
+                className="w-full rounded-xl bg-slate-950 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-60"
+              >
+                {isAsking ? "Asking Bedrock..." : "Ask Bedrock"}
+              </button>
+            </div>
+          </form>
+
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[#ff9900]">
+              AI Response
+            </p>
+            <h2 className="mt-2 text-2xl font-bold text-slate-950">
+              Nova Micro answer
+            </h2>
+
+            <div className="mt-6 rounded-2xl bg-slate-50 p-5 leading-8 text-slate-700">
+              {isAsking ? (
+                "Generating answer..."
+              ) : answer ? (
+                <p className="whitespace-pre-line">{answer}</p>
+              ) : (
+                "Ask a question to test Amazon Bedrock integration."
               )}
             </div>
           </div>

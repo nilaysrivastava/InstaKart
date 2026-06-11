@@ -12,6 +12,8 @@ provider:
   environment:
     NODE_OPTIONS: --enable-source-maps
     ITEMS_TABLE: hackon6-items-dev
+    BEDROCK_REGION: us-east-1
+    BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
 
   iam:
     role:
@@ -26,6 +28,16 @@ provider:
             - dynamodb:UpdateItem
           Resource:
             - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev
+
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+            - bedrock:InvokeModelWithResponseStream
+          Resource:
+            - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0
+            - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0
+            - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-text-express-v1
+            - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
 
   httpApi:
     cors:
@@ -62,6 +74,13 @@ functions:
       - httpApi:
           path: /items
           method: GET
+
+  askBedrock:
+    handler: src/handler.askBedrock
+    events:
+      - httpApi:
+          path: /ask
+          method: POST
 
 plugins:
   - serverless-offline

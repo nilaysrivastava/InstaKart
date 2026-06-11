@@ -56,3 +56,25 @@ export async function createItem(payload: {
 
   return response.json();
 }
+
+export async function askBedrock(question: string): Promise<{
+  success: boolean;
+  question: string;
+  answer: string;
+  modelId: string;
+  timestamp: string;
+}> {
+  const response = await fetch(`${API_BASE_URL}/ask`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ question }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to get Bedrock answer");
+  }
+
+  return response.json();
+}

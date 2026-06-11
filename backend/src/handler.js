@@ -1,3 +1,8 @@
+const {
+  BedrockRuntimeClient,
+  ConverseCommand,
+} = require("@aws-sdk/client-bedrock-runtime");
+
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
@@ -13,6 +18,13 @@ const client = new DynamoDBClient({
 const docClient = DynamoDBDocumentClient.from(client);
 
 const ITEMS_TABLE = process.env.ITEMS_TABLE || "hackon6-items-dev";
+
+const bedrockClient = new BedrockRuntimeClient({
+  region: process.env.BEDROCK_REGION || "us-east-1",
+});
+
+const BEDROCK_MODEL_ID =
+  process.env.BEDROCK_MODEL_ID || "amazon.nova-micro-v1:0";
 
 const jsonResponse = (statusCode, body) => {
   return {
@@ -118,6 +130,71 @@ module.exports.listItems = async () => {
     return jsonResponse(500, {
       success: false,
       message: "Failed to list items",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.askBedrock = async (event) => {
+  try {
+    const body = parseBody(event);
+
+    if (!body) {
+      return jsonResponse(400, {
+        success: false,
+        message: "Invalid JSON body",
+      });
+    }
+
+    const question = body.question?.trim();
+
+    if (!question) {
+      return jsonResponse(400, {
+        success: false,
+        message: "Question is required",
+      });
+    }
+
+    const command = new ConverseCommand({
+      modelId: BEDROCK_MODEL_ID,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              text: `You are an expert AWS solutions architect helping a hackathon team. Answer clearly, practically, and concisely.\n\nQuestion: ${question}`,
+            },
+          ],
+        },
+      ],
+      inferenceConfig: {
+        maxTokens: 500,
+        temperature: 0.4,
+        topP: 0.9,
+      },
+    });
+
+    const response = await bedrockClient.send(command);
+
+    const answer =
+      response.output?.message?.content
+        ?.map((block) => block.text || "")
+        .join("")
+        .trim() || "No answer generated.";
+
+    return jsonResponse(200, {
+      success: true,
+      question,
+      answer,
+      modelId: BEDROCK_MODEL_ID,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("askBedrock error:", error);
+
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to get Bedrock answer",
       error: error.message,
     });
   }
