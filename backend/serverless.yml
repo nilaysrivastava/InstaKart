@@ -7,13 +7,13 @@ provider:
   runtime: nodejs20.x
   region: ap-south-1
   stage: dev
-  memorySize: 256
-  timeout: 10
+  memorySize: 512
+  timeout: 25
   environment:
     NODE_OPTIONS: --enable-source-maps
     ITEMS_TABLE: hackon6-items-dev
     BEDROCK_REGION: us-east-1
-    BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
+    BEDROCK_MODEL_ID: amazon.nova-pro-v1:0
 
   iam:
     role:
@@ -80,6 +80,41 @@ functions:
     events:
       - httpApi:
           path: /ask
+          method: POST
+
+  seedNowInventory:
+    handler: src/handler.seedNowInventory
+    events:
+      - httpApi:
+          path: /now/seed
+          method: POST
+
+  generateNowPlan:
+    handler: src/handler.generateNowPlan
+    events:
+      - httpApi:
+          path: /now/plan
+          method: POST
+
+  checkoutNowOrder:
+    handler: src/handler.checkoutNowOrder
+    events:
+      - httpApi:
+          path: /now/checkout
+          method: POST
+
+  listNowOrders:
+    handler: src/handler.listNowOrders
+    events:
+      - httpApi:
+          path: /now/orders
+          method: GET
+
+  saveNowFeedback:
+    handler: src/handler.saveNowFeedback
+    events:
+      - httpApi:
+          path: /now/feedback
           method: POST
 
 plugins:
