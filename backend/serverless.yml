@@ -8,7 +8,7 @@ provider:
   region: ap-south-1
   stage: dev
   memorySize: 512
-  timeout: 20
+  timeout: 25
   environment:
     NODE_OPTIONS: --enable-source-maps
     HOME_TABLE: homemate-dev
@@ -79,6 +79,55 @@ functions:
     events:
       - httpApi:
           path: /households/{householdId}/profile
+          method: GET
+
+  saveOnboarding:
+    handler: src/handler.saveOnboarding
+    events:
+      - httpApi:
+          path: /households/{householdId}/onboarding
+          method: POST
+
+  getOnboarding:
+    handler: src/handler.getOnboarding
+    events:
+      - httpApi:
+          path: /households/{householdId}/onboarding
+          method: GET
+
+  generateHomeRhythm:
+    handler: src/handler.generateHomeRhythm
+    events:
+      - httpApi:
+          path: /households/{householdId}/generate
+          method: POST
+
+  getDashboard:
+    handler: src/handler.getDashboard
+    events:
+      - httpApi:
+          path: /households/{householdId}/dashboard
+          method: GET
+
+  getRoutines:
+    handler: src/handler.getRoutines
+    events:
+      - httpApi:
+          path: /households/{householdId}/routines
+          method: GET
+
+  getTimeline:
+    handler: src/handler.getTimeline
+    events:
+      - httpApi:
+          path: /households/{householdId}/timeline
+          method: GET
+
+  getRhythm:
+    handler: src/handler.getRhythm
+    events:
+      - httpApi:
+          path: /households/{householdId}/rhythm
           method: GET
 
 resources:
