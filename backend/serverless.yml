@@ -1,4 +1,4 @@
-service: hackon6-api
+service: homemate-api
 
 frameworkVersion: "3"
 
@@ -7,11 +7,11 @@ provider:
   runtime: nodejs20.x
   region: ap-south-1
   stage: dev
-  memorySize: 256
-  timeout: 10
+  memorySize: 512
+  timeout: 20
   environment:
     NODE_OPTIONS: --enable-source-maps
-    ITEMS_TABLE: hackon6-items-dev
+    HOME_TABLE: homemate-dev
     BEDROCK_REGION: us-east-1
     BEDROCK_MODEL_ID: amazon.nova-micro-v1:0
 
@@ -22,12 +22,13 @@ provider:
           Action:
             - dynamodb:PutItem
             - dynamodb:GetItem
-            - dynamodb:Scan
-            - dynamodb:Query
-            - dynamodb:DeleteItem
             - dynamodb:UpdateItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:DeleteItem
+            - dynamodb:BatchWriteItem
           Resource:
-            - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev
+            - arn:aws:dynamodb:ap-south-1:*:table/homemate-dev
 
         - Effect: Allow
           Action:
@@ -36,8 +37,6 @@ provider:
           Resource:
             - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0
             - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0
-            - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-text-express-v1
-            - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
 
   httpApi:
     cors:
@@ -61,26 +60,44 @@ functions:
           path: /health
           method: GET
 
-  createItem:
-    handler: src/handler.createItem
+  signup:
+    handler: src/handler.signup
     events:
       - httpApi:
-          path: /items
+          path: /auth/signup
           method: POST
 
-  listItems:
-    handler: src/handler.listItems
+  login:
+    handler: src/handler.login
     events:
       - httpApi:
-          path: /items
+          path: /auth/login
+          method: POST
+
+  getHouseholdProfile:
+    handler: src/handler.getHouseholdProfile
+    events:
+      - httpApi:
+          path: /households/{householdId}/profile
           method: GET
 
-  askBedrock:
-    handler: src/handler.askBedrock
-    events:
-      - httpApi:
-          path: /ask
-          method: POST
+resources:
+  Resources:
+    HomeMateTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: homemate-dev
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
 
 plugins:
   - serverless-offline

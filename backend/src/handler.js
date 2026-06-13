@@ -1,61 +1,53 @@
-const {
-  BedrockRuntimeClient,
-  ConverseCommand,
-} = require("@aws-sdk/client-bedrock-runtime");
-
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
   PutCommand,
-  ScanCommand,
+  GetCommand,
+  UpdateCommand,
 } = require("@aws-sdk/lib-dynamodb");
-const { randomUUID } = require("crypto");
 
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || "ap-south-1",
-});
+const { jsonResponse, parseBody } = require("./utils/response");
+const {
+  normalizeEmail,
+  createUserIdFromEmail,
+  createHouseholdIdFromUserId,
+  hashPassword,
+  verifyPassword,
+  createSessionToken,
+} = require("./utils/auth");
 
+const AWS_REGION = process.env.AWS_REGION || "ap-south-1";
+const HOME_TABLE = process.env.HOME_TABLE || "homemate-dev";
+
+const client = new DynamoDBClient({ region: AWS_REGION });
 const docClient = DynamoDBDocumentClient.from(client);
 
-const ITEMS_TABLE = process.env.ITEMS_TABLE || "hackon6-items-dev";
-
-const bedrockClient = new BedrockRuntimeClient({
-  region: process.env.BEDROCK_REGION || "us-east-1",
-});
-
-const BEDROCK_MODEL_ID =
-  process.env.BEDROCK_MODEL_ID || "amazon.nova-micro-v1:0";
-
-const jsonResponse = (statusCode, body) => {
-  return {
-    statusCode,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Credentials": true,
-    },
-    body: JSON.stringify(body),
-  };
+const keys = {
+  userPk: (userId) => `USER#${userId}`,
+  householdPk: (householdId) => `HOUSEHOLD#${householdId}`,
+  profileSk: "PROFILE",
+  sessionSk: (token) => `SESSION#${token}`,
 };
 
-const parseBody = (event) => {
-  try {
-    return event.body ? JSON.parse(event.body) : {};
-  } catch {
-    return null;
-  }
+const withoutPrivateFields = (user) => {
+  if (!user) return user;
+
+  const { PK, SK, passwordHash, entityType, ...safeUser } = user;
+
+  return safeUser;
 };
 
 module.exports.health = async () => {
   return jsonResponse(200, {
     success: true,
-    message: "HackOn 6.0 backend is healthy",
-    service: "hackon6-api",
+    service: "homemate-api",
+    message: "HomeMate backend is healthy",
+    table: HOME_TABLE,
     timestamp: new Date().toISOString(),
   });
 };
 
-module.exports.createItem = async (event) => {
+module.exports.signup = async (event) => {
   try {
     const body = parseBody(event);
 
@@ -66,76 +58,124 @@ module.exports.createItem = async (event) => {
       });
     }
 
-    const title = body.title?.trim();
-    const description = body.description?.trim();
+    const householdName = String(body.householdName || "").trim();
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
 
-    if (!title) {
+    if (!householdName || !email || !password) {
       return jsonResponse(400, {
         success: false,
-        message: "Title is required",
+        message: "householdName, email, and password are required",
       });
     }
 
-    const item = {
-      id: randomUUID(),
-      title,
-      description: description || "",
-      status: body.status || "new",
-      createdAt: new Date().toISOString(),
+    if (password.length < 6) {
+      return jsonResponse(400, {
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const userId = createUserIdFromEmail(email);
+    const householdId = createHouseholdIdFromUserId(userId);
+    const now = new Date().toISOString();
+    const sessionToken = createSessionToken();
+
+    const userRecord = {
+      PK: keys.userPk(userId),
+      SK: keys.profileSk,
+      entityType: "USER_PROFILE",
+      userId,
+      householdId,
+      householdName,
+      email,
+      passwordHash: hashPassword(password),
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: now,
+    };
+
+    const householdRecord = {
+      PK: keys.householdPk(householdId),
+      SK: keys.profileSk,
+      entityType: "HOUSEHOLD_PROFILE",
+      householdId,
+      userId,
+      householdName,
+      email,
+      onboardingStatus: "not_started",
+      simulationStatus: "not_generated",
+      learningMaturity: "Day 0",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const sessionRecord = {
+      PK: keys.userPk(userId),
+      SK: keys.sessionSk(sessionToken),
+      entityType: "SESSION",
+      userId,
+      householdId,
+      sessionToken,
+      createdAt: now,
     };
 
     await docClient.send(
       new PutCommand({
-        TableName: ITEMS_TABLE,
-        Item: item,
+        TableName: HOME_TABLE,
+        Item: userRecord,
+        ConditionExpression: "attribute_not_exists(PK)",
+      })
+    );
+
+    await docClient.send(
+      new PutCommand({
+        TableName: HOME_TABLE,
+        Item: householdRecord,
+      })
+    );
+
+    await docClient.send(
+      new PutCommand({
+        TableName: HOME_TABLE,
+        Item: sessionRecord,
       })
     );
 
     return jsonResponse(201, {
       success: true,
-      message: "Item created successfully",
-      item,
+      message: "Signup successful",
+      user: withoutPrivateFields(userRecord),
+      household: {
+        householdId,
+        userId,
+        householdName,
+        email,
+        onboardingStatus: "not_started",
+        simulationStatus: "not_generated",
+        learningMaturity: "Day 0",
+      },
+      sessionToken,
     });
   } catch (error) {
-    console.error("createItem error:", error);
+    console.error("signup error:", error);
+
+    if (error.name === "ConditionalCheckFailedException") {
+      return jsonResponse(409, {
+        success: false,
+        message: "An account already exists for this email. Please login.",
+      });
+    }
 
     return jsonResponse(500, {
       success: false,
-      message: "Failed to create item",
+      message: "Signup failed",
       error: error.message,
     });
   }
 };
 
-module.exports.listItems = async () => {
-  try {
-    const result = await docClient.send(
-      new ScanCommand({
-        TableName: ITEMS_TABLE,
-      })
-    );
-
-    const items = result.Items || [];
-
-    items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    return jsonResponse(200, {
-      success: true,
-      count: items.length,
-      items,
-    });
-  } catch (error) {
-    console.error("listItems error:", error);
-
-    return jsonResponse(500, {
-      success: false,
-      message: "Failed to list items",
-      error: error.message,
-    });
-  }
-};
-
-module.exports.askBedrock = async (event) => {
+module.exports.login = async (event) => {
   try {
     const body = parseBody(event);
 
@@ -146,55 +186,149 @@ module.exports.askBedrock = async (event) => {
       });
     }
 
-    const question = body.question?.trim();
+    const email = normalizeEmail(body.email);
+    const password = String(body.password || "");
 
-    if (!question) {
+    if (!email || !password) {
       return jsonResponse(400, {
         success: false,
-        message: "Question is required",
+        message: "email and password are required",
       });
     }
 
-    const command = new ConverseCommand({
-      modelId: BEDROCK_MODEL_ID,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              text: `You are an expert AWS solutions architect helping a hackathon team. Answer clearly, practically, and concisely.\n\nQuestion: ${question}`,
-            },
-          ],
+    const userId = createUserIdFromEmail(email);
+
+    const userResult = await docClient.send(
+      new GetCommand({
+        TableName: HOME_TABLE,
+        Key: {
+          PK: keys.userPk(userId),
+          SK: keys.profileSk,
         },
-      ],
-      inferenceConfig: {
-        maxTokens: 500,
-        temperature: 0.4,
-        topP: 0.9,
-      },
-    });
+      })
+    );
 
-    const response = await bedrockClient.send(command);
+    const user = userResult.Item;
 
-    const answer =
-      response.output?.message?.content
-        ?.map((block) => block.text || "")
-        .join("")
-        .trim() || "No answer generated.";
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      return jsonResponse(401, {
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const sessionToken = createSessionToken();
+    const now = new Date().toISOString();
+
+    await docClient.send(
+      new PutCommand({
+        TableName: HOME_TABLE,
+        Item: {
+          PK: keys.userPk(userId),
+          SK: keys.sessionSk(sessionToken),
+          entityType: "SESSION",
+          userId,
+          householdId: user.householdId,
+          sessionToken,
+          createdAt: now,
+        },
+      })
+    );
+
+    await docClient.send(
+      new UpdateCommand({
+        TableName: HOME_TABLE,
+        Key: {
+          PK: keys.userPk(userId),
+          SK: keys.profileSk,
+        },
+        UpdateExpression:
+          "SET lastLoginAt = :lastLoginAt, updatedAt = :updatedAt",
+        ExpressionAttributeValues: {
+          ":lastLoginAt": now,
+          ":updatedAt": now,
+        },
+      })
+    );
+
+    const householdResult = await docClient.send(
+      new GetCommand({
+        TableName: HOME_TABLE,
+        Key: {
+          PK: keys.householdPk(user.householdId),
+          SK: keys.profileSk,
+        },
+      })
+    );
 
     return jsonResponse(200, {
       success: true,
-      question,
-      answer,
-      modelId: BEDROCK_MODEL_ID,
-      timestamp: new Date().toISOString(),
+      message: "Login successful",
+      user: withoutPrivateFields(user),
+      household: householdResult.Item
+        ? {
+            householdId: householdResult.Item.householdId,
+            userId: householdResult.Item.userId,
+            householdName: householdResult.Item.householdName,
+            email: householdResult.Item.email,
+            onboardingStatus: householdResult.Item.onboardingStatus,
+            simulationStatus: householdResult.Item.simulationStatus,
+            learningMaturity: householdResult.Item.learningMaturity,
+          }
+        : null,
+      sessionToken,
     });
   } catch (error) {
-    console.error("askBedrock error:", error);
+    console.error("login error:", error);
 
     return jsonResponse(500, {
       success: false,
-      message: "Failed to get Bedrock answer",
+      message: "Login failed",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.getHouseholdProfile = async (event) => {
+  try {
+    const householdId = event.pathParameters?.householdId;
+
+    if (!householdId) {
+      return jsonResponse(400, {
+        success: false,
+        message: "householdId is required",
+      });
+    }
+
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: HOME_TABLE,
+        Key: {
+          PK: keys.householdPk(householdId),
+          SK: keys.profileSk,
+        },
+      })
+    );
+
+    if (!result.Item) {
+      return jsonResponse(404, {
+        success: false,
+        message: "Household not found",
+      });
+    }
+
+    const { PK, SK, entityType, ...household } = result.Item;
+
+    return jsonResponse(200, {
+      success: true,
+      household,
+    });
+  } catch (error) {
+    console.error("getHouseholdProfile error:", error);
+
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to load household profile",
       error: error.message,
     });
   }
