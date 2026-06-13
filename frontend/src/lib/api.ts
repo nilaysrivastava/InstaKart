@@ -2,6 +2,22 @@ const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com";
 
+export type NowProduct = {
+  id: string;
+  entityType?: "PRODUCT";
+  name: string;
+  category?: string;
+  aisle?: string;
+  price: number;
+  etaMinutes: number;
+  available?: boolean;
+  tags?: string[];
+  imageHint?: string;
+  searchText?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Item = {
   id: string;
   entityType?: string;
@@ -120,7 +136,7 @@ export type NowPlan = {
     bestValue: NowCartMode;
     mostComplete: NowCartMode;
   };
-  regretPrevention: NowRegretItem[];
+
   substitutions: NowSubstitution[];
   confidence: NowConfidence;
   aiExplanation: string;
@@ -129,6 +145,40 @@ export type NowPlan = {
   userId: string;
   generatedAt: string;
   modelId: string;
+
+  regretPrevention?: {
+    productId: string;
+    name: string;
+    price: number;
+    etaMinutes: number;
+    reason: string;
+  }[];
+
+  needGraph?: {
+    primaryNeed: string;
+    inferredFrom: string;
+    dimensions: {
+      name: string;
+      covered: boolean;
+      reason: string;
+    }[];
+  };
+
+  deadlineSafety?: {
+    hasDeadline: boolean;
+    deadlineMinutes?: number | null;
+    selectedEtaMinutes: number;
+    bufferMinutes?: number | null;
+    status: "safe" | "tight" | "risky" | "urgent_but_no_exact_deadline";
+    message: string;
+  };
+
+  coverage?: {
+    score: number;
+    coveredDimensions: number;
+    totalDimensions: number;
+    summary: string;
+  };
 };
 
 export type GenerateNowPlanResponse = {
@@ -208,6 +258,14 @@ async function apiRequest<T>(
   }
 
   return data as T;
+}
+
+export async function getNowProducts(): Promise<{
+  success: boolean;
+  count: number;
+  products: NowProduct[];
+}> {
+  return apiRequest("/now/products");
 }
 
 export async function getHealth(): Promise<HealthResponse> {

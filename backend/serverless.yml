@@ -13,7 +13,9 @@ provider:
     NODE_OPTIONS: --enable-source-maps
     ITEMS_TABLE: hackon6-items-dev
     BEDROCK_REGION: us-east-1
-    BEDROCK_MODEL_ID: amazon.nova-pro-v1:0
+    BEDROCK_PLANNER_MODEL_ID: ${env:BEDROCK_PLANNER_MODEL_ID, 'amazon.nova-pro-v1:0'}
+    BEDROCK_FALLBACK_MODEL_ID: amazon.nova-pro-v1:0
+    BEDROCK_FAST_MODEL_ID: amazon.nova-micro-v1:0
 
   iam:
     role:
@@ -28,6 +30,7 @@ provider:
             - dynamodb:UpdateItem
           Resource:
             - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev
+            - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev/index/*
 
         - Effect: Allow
           Action:
@@ -91,6 +94,8 @@ functions:
 
   generateNowPlan:
     handler: src/handler.generateNowPlan
+    timeout: 29
+    memorySize: 1024
     events:
       - httpApi:
           path: /now/plan
@@ -116,6 +121,13 @@ functions:
       - httpApi:
           path: /now/feedback
           method: POST
+
+  listNowProducts:
+    handler: src/handler.listNowProducts
+    events:
+      - httpApi:
+          path: /now/products
+          method: GET
 
 plugins:
   - serverless-offline
