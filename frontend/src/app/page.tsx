@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   BudgetMode,
   checkoutNowOrder,
@@ -494,7 +494,6 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
   const selectedCart = plan.cartModes[plan.recommendedMode];
   const eta = selectedCart?.etaMinutes || plan.checkoutSummary?.etaMinutes || 0;
   const total = selectedCart?.items ? getCartTotal(selectedCart.items) : 0;
-  const coverage = plan.coverage;
   const deadlineSafety = plan.deadlineSafety;
   const needDimensions = plan.needGraph?.dimensions || [];
   const reminder = plan.regretPrevention?.[0];
@@ -512,12 +511,6 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
             {formatNeedLabel(plan.needCategory)}
           </h3>
         </div>
-
-        {coverage ? (
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
-            {coverage.score}% covered
-          </span>
-        ) : null}
       </div>
 
       <div className="mt-1 grid grid-cols-2 gap-2">
@@ -1120,7 +1113,14 @@ function AssistPanel({
               disabled={isGenerating}
               className="mt-4 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-amber-300 disabled:opacity-70"
             >
-              {isGenerating ? "Creating cart..." : "Create instant cart"}
+              {isGenerating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+                  Building your cart
+                </span>
+              ) : (
+                "Create instant cart"
+              )}
             </button>
           </form>
 
@@ -1136,63 +1136,69 @@ function AssistPanel({
                 </div>
               ) : null}
 
-              {!plan ? (
-                <div className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-3xl">
-                    🛒
+              <CartStage
+                stageKey={isGenerating ? "loading" : plan?.planId || "empty"}
+              >
+                {isGenerating ? (
+                  <AiCartLoader />
+                ) : !plan ? (
+                  <div className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-3xl">
+                      🛒
+                    </div>
+                    <h3 className="mt-4 text-xl font-black text-slate-950">
+                      Your instant cart appears here
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Describe the situation on the left and review each item
+                      one by one.
+                    </p>
                   </div>
-                  <h3 className="mt-4 text-xl font-black text-slate-950">
-                    Your instant cart appears here
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Describe the situation on the left and review each item one
-                    by one.
-                  </p>
-                </div>
-              ) : topItem ? (
-                <div>
-                  <div className="mx-auto mb-4 flex max-w-sm items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                        Instant Cart
-                      </p>
-                      <h3 className="text-lg font-black text-slate-950">
-                        {plan.cartModes[decisionMode]?.cartTitle ||
-                          "Recommended items"}
-                      </h3>
+                ) : topItem ? (
+                  <div>
+                    <div className="mx-auto mb-4 flex max-w-sm items-center justify-between">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                          Instant Cart
+                        </p>
+                        <h3 className="text-lg font-black text-slate-950">
+                          {plan.cartModes[decisionMode]?.cartTitle ||
+                            "Recommended items"}
+                        </h3>
+                      </div>
+
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+                        {deckItems.length} left
+                      </span>
                     </div>
 
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
-                      {deckItems.length} left
-                    </span>
+                    <DeckCard
+                      item={topItem}
+                      index={currentIndex}
+                      total={totalDeckItems}
+                      onAdd={onAddDeckItem}
+                      onSkip={onSkipDeckItem}
+                      disabled={isGenerating}
+                    />
                   </div>
-
-                  <DeckCard
-                    item={topItem}
-                    index={currentIndex}
-                    total={totalDeckItems}
-                    onAdd={onAddDeckItem}
-                    onSkip={onSkipDeckItem}
-                    disabled={isGenerating}
-                  />
-                </div>
-              ) : (
-                <div className="mx-auto max-w-md rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-100">
-                  <div className="text-4xl">✅</div>
-                  <h3 className="mt-3 text-xl font-black text-emerald-900">
-                    All items reviewed
-                  </h3>
-                  <p className="mt-2 text-sm text-emerald-800">
-                    Your selected items are waiting in the cart.
-                  </p>
-                  <button
-                    onClick={onOpenCart}
-                    className="mt-4 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white hover:bg-emerald-800"
-                  >
-                    Open cart
-                  </button>
-                </div>
-              )}
+                ) : (
+                  <div className="mx-auto max-w-md rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-100">
+                    <div className="text-4xl">✅</div>
+                    <h3 className="mt-3 text-xl font-black text-emerald-900">
+                      All items reviewed
+                    </h3>
+                    <p className="mt-2 text-sm text-emerald-800">
+                      Your selected items are waiting in the cart.
+                    </p>
+                    <button
+                      onClick={onOpenCart}
+                      className="mt-4 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white hover:bg-emerald-800"
+                    >
+                      Open cart
+                    </button>
+                  </div>
+                )}
+              </CartStage>
 
               {plan ? (
                 <form
@@ -1216,7 +1222,9 @@ function AssistPanel({
               ) : null}
             </div>
 
-            <div className="min-h-0">
+            <div
+              className={plan ? "min-h-0" : "flex min-h-[430px] items-center"}
+            >
               {plan ? (
                 <>
                   <div className="mb-3">
@@ -1225,7 +1233,7 @@ function AssistPanel({
                   <MiniPlanDetails plan={plan} />
                 </>
               ) : (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
                     How it works
                   </p>
@@ -1251,6 +1259,78 @@ function AssistPanel({
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+function AiCartLoader() {
+  return (
+    <div className="mx-auto flex min-h-[260px] w-full max-w-md items-center justify-center">
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="mt-1 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-amber-400 border-t-slate-900" />
+
+          <div className="flex-1">
+            <h3 className="text-base font-black text-slate-950">
+              Building your cart
+            </h3>
+
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Finding relevant items based on your situation, time, and budget.
+            </p>
+
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="h-full w-1/2 animate-[cartLoaderBar_1.35s_ease-in-out_infinite] rounded-full bg-amber-400" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style jsx global>{`
+        @keyframes cartLoaderBar {
+          0% {
+            transform: translateX(-120%);
+          }
+          50% {
+            transform: translateX(60%);
+          }
+          100% {
+            transform: translateX(220%);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function CartStage({
+  stageKey,
+  children,
+}: {
+  stageKey: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      key={stageKey}
+      className="w-full motion-safe:animate-[cartStageIn_420ms_cubic-bezier(0.22,1,0.36,1)_both]"
+    >
+      {children}
+
+      <style jsx global>{`
+        @keyframes cartStageIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+            filter: blur(2px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

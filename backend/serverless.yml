@@ -14,7 +14,7 @@ provider:
     ITEMS_TABLE: hackon6-items-dev
     BEDROCK_REGION: us-east-1
     BEDROCK_PLANNER_MODEL_ID: ${env:BEDROCK_PLANNER_MODEL_ID, 'amazon.nova-pro-v1:0'}
-    BEDROCK_FALLBACK_MODEL_ID: amazon.nova-pro-v1:0
+    BEDROCK_FALLBACK_MODEL_ID: ${env:BEDROCK_FALLBACK_MODEL_ID, 'amazon.nova-micro-v1:0'}
     BEDROCK_FAST_MODEL_ID: amazon.nova-micro-v1:0
     BEDROCK_EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
 
@@ -117,6 +117,13 @@ functions:
           path: /now/orders
           method: GET
 
+  trackNowOrder:
+    handler: src/handler.trackNowOrder
+    events:
+      - httpApi:
+          path: /now/orders/{orderId}/track
+          method: GET
+
   saveNowFeedback:
     handler: src/handler.saveNowFeedback
     events:
@@ -130,6 +137,15 @@ functions:
       - httpApi:
           path: /now/products
           method: GET
+
+  embedProducts:
+    handler: src/handler.embedProducts
+    timeout: 29
+    memorySize: 1024
+    events:
+      - httpApi:
+          path: /now/embed-products
+          method: POST
 
 plugins:
   - serverless-offline

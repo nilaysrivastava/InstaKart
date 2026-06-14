@@ -18,7 +18,9 @@ const BEDROCK_REGION = process.env.BEDROCK_REGION || "us-east-1";
 const BEDROCK_PLANNER_MODEL_ID =
   process.env.BEDROCK_PLANNER_MODEL_ID || "amazon.nova-pro-v1:0";
 const BEDROCK_FALLBACK_MODEL_ID =
-  process.env.BEDROCK_FALLBACK_MODEL_ID || "amazon.nova-pro-v1:0";
+  process.env.BEDROCK_FALLBACK_MODEL_ID ||
+  process.env.BEDROCK_FAST_MODEL_ID ||
+  "amazon.nova-micro-v1:0";
 const BEDROCK_FAST_MODEL_ID =
   process.env.BEDROCK_FAST_MODEL_ID || "amazon.nova-micro-v1:0";
 const BEDROCK_EMBEDDING_MODEL_ID =
@@ -88,7 +90,9 @@ const validDecisionMode = (value) =>
 
 const getTimeContext = () => {
   const now = new Date();
-  const hour = now.getHours();
+  const istMs = now.getTime() + 5.5 * 60 * 60 * 1000;
+  const ist = new Date(istMs);
+  const hour = ist.getUTCHours();
 
   let timeOfDay = "night";
   if (hour >= 5 && hour < 12) timeOfDay = "morning";
@@ -97,7 +101,7 @@ const getTimeContext = () => {
 
   return {
     isoTime: now.toISOString(),
-    localAssumption: "Asia/Kolkata demo context",
+    localAssumption: "Asia/Kolkata",
     hour,
     timeOfDay,
   };
@@ -425,20 +429,8 @@ const scanByEntityType = async (entityType, limit = 100) => {
   return items.slice(0, limit);
 };
 
-const getInventory = async ({ forceRefresh = false } = {}) => {
-  const now = Date.now();
-
-  if (
-    !forceRefresh &&
-    inventoryCache.items &&
-    now - inventoryCache.fetchedAt < INVENTORY_CACHE_TTL_MS
-  ) {
-    return inventoryCache.items;
-  }
-
-  const products = await queryProducts(300);
-
-  const inventory = products
+const normalizeProducts = (products = []) =>
+  products
     .filter((product) => product.available !== false)
     .map((product) => ({
       ...product,
@@ -448,12 +440,37 @@ const getInventory = async ({ forceRefresh = false } = {}) => {
     }))
     .sort((a, b) => Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999));
 
+const refreshInventoryCache = async () => {
+  const products = await queryProducts(300);
+  const inventory = normalizeProducts(products);
   inventoryCache = {
     items: inventory,
-    fetchedAt: now,
+    fetchedAt: Date.now(),
   };
-
   return inventory;
+};
+
+const getInventory = async ({ forceRefresh = false } = {}) => {
+  const now = Date.now();
+  const hasCache =
+    Array.isArray(inventoryCache.items) && inventoryCache.items.length;
+  const isExpired = now - inventoryCache.fetchedAt >= INVENTORY_CACHE_TTL_MS;
+
+  if (!forceRefresh && hasCache) {
+    if (isExpired) {
+      console.log(
+        "Inventory cache stale; serving stale data and refreshing in background."
+      );
+      refreshInventoryCache().catch((error) => {
+        console.warn("Background inventory refresh failed:", {
+          message: error.message,
+        });
+      });
+    }
+    return inventoryCache.items;
+  }
+
+  return refreshInventoryCache();
 };
 
 const queryUserEntities = async (userId, limit = 80) => {
@@ -563,10 +580,628 @@ const inferSimpleNeedCategory = (userRequest = "") => {
   return "urgent_need";
 };
 
-const rankInventoryByEmbeddings = async (
+const productSearchText = (product = {}) => {
+  return [
+    product.id,
+    product.name,
+    product.category,
+    product.aisle,
+    product.searchText,
+    ...(product.tags || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+};
+
+const getEffectiveNeedCategory = (userRequest = "", aiNeedCategory = "") => {
+  const inferred = inferSimpleNeedCategory(userRequest);
+  const aiCategory = safeString(aiNeedCategory);
+  const genericCategories = new Set([
+    "urgent_need",
+    "general_need",
+    "general_urgent_need",
+    "quick_need",
+    "shopping_need",
+    "health_comfort",
+  ]);
+
+  if (!aiCategory || genericCategories.has(aiCategory)) {
+    return inferred || "urgent_need";
+  }
+
+  if (inferred && inferred !== "urgent_need" && aiCategory === "urgent_need") {
+    return inferred;
+  }
+
+  return aiCategory;
+};
+
+const buildShoppingIntentPrompt = ({
   userRequest,
+  budgetMode,
+  decisionMode,
+  panicMode,
+}) => `
+You are a retrieval-intent generator for an Amazon Now instant cart.
+Convert the user's sentence into a product-need description for semantic search.
+
+User sentence: ${userRequest}
+Controls: budgetMode=${budgetMode}, decisionMode=${decisionMode}, panicMode=${panicMode}
+
+Rules:
+1. Write what product roles are needed, not a story.
+2. Do NOT add unrelated emergency products just because panicMode is true.
+3. Do NOT include delivery speed, price, or generic urgency words unless they describe a product need.
+4. requiredProductRoles must be concrete jobs products should perform for this exact situation.
+5. excludedProductTraits should describe what would be filler or not useful.
+6. Return ONLY valid JSON.
+
+JSON shape:
+{
+  "needCategory": "short_snake_case",
+  "shoppingIntentText": "compact search text focused on product roles and use cases",
+  "requiredProductRoles": ["role 1", "role 2"],
+  "excludedProductTraits": ["trait 1"],
+  "userFacingSummary": "short phrase"
+}
+`;
+
+const normalizeShoppingIntentContext = (raw, userRequest = "") => {
+  const inferredNeedCategory = inferSimpleNeedCategory(userRequest);
+  const roles = Array.isArray(raw?.requiredProductRoles)
+    ? raw.requiredProductRoles
+        .map((role) => safeString(role))
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
+  const excluded = Array.isArray(raw?.excludedProductTraits)
+    ? raw.excludedProductTraits
+        .map((trait) => safeString(trait))
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
+
+  const shoppingIntentText = safeString(raw?.shoppingIntentText, userRequest)
+    .replace(/urgent|emergency|panic|as soon as possible|fast delivery/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return {
+    needCategory: getEffectiveNeedCategory(
+      userRequest,
+      raw?.needCategory || inferredNeedCategory
+    ),
+    shoppingIntentText: shoppingIntentText || userRequest,
+    requiredProductRoles: roles.length ? roles : [userRequest],
+    excludedProductTraits: excluded,
+    userFacingSummary: safeString(
+      raw?.userFacingSummary,
+      "Matched products to the situation."
+    ),
+  };
+};
+
+const extractShoppingIntent = async ({
+  userRequest,
+  budgetMode,
+  decisionMode,
+  panicMode,
+}) => {
+  try {
+    const text = await callBedrockConverse({
+      prompt: buildShoppingIntentPrompt({
+        userRequest,
+        budgetMode,
+        decisionMode,
+        panicMode,
+      }),
+      modelId: BEDROCK_PLANNER_MODEL_ID,
+      maxTokens: 360,
+      temperature: 0.05,
+      topP: 0.5,
+    });
+
+    return normalizeShoppingIntentContext(
+      parseJsonObjectFromText(text),
+      userRequest
+    );
+  } catch (error) {
+    console.warn("Shopping intent extraction skipped; using raw request:", {
+      message: error.message,
+    });
+
+    return normalizeShoppingIntentContext(
+      {
+        needCategory: inferSimpleNeedCategory(userRequest),
+        shoppingIntentText: userRequest,
+        requiredProductRoles: [userRequest],
+        excludedProductTraits: [],
+      },
+      userRequest
+    );
+  }
+};
+
+const buildRetrievalTextFromIntent = (userRequest, shoppingIntentContext) => {
+  if (!shoppingIntentContext) return userRequest;
+
+  return [
+    shoppingIntentContext.shoppingIntentText,
+    ...(shoppingIntentContext.requiredProductRoles || []),
+  ]
+    .filter(Boolean)
+    .join(". ")
+    .slice(0, 1600);
+};
+
+const getProductSemanticScore = (product = {}) => {
+  const score = Number(product.__semanticScore || product.semanticScore || 0);
+  return Number.isFinite(score) ? score : 0;
+};
+
+const getProductRetrievalScore = (product = {}) => {
+  const score = Number(product.__retrievalScore || 0);
+  return Number.isFinite(score) ? score : 0;
+};
+
+const etaScore = (product = {}) => {
+  const eta = Number(product.etaMinutes || 999);
+  if (!Number.isFinite(eta)) return 0;
+  return clampNumber((30 - eta) / 30, 0, 1, 0);
+};
+
+const priceFitScore = (product = {}, budgetMode = "balanced") => {
+  const price = Number(product.price || 0);
+  if (!Number.isFinite(price) || price <= 0) return 0.5;
+
+  if (budgetMode === "save") return clampNumber((220 - price) / 220, 0, 1, 0.4);
+  if (budgetMode === "premium")
+    return clampNumber((450 - price) / 450, 0, 1, 0.6);
+  return clampNumber((320 - price) / 320, 0, 1, 0.5);
+};
+
+const lexicalRelevanceScore = (product = {}, userRequest = "") => {
+  const tokens = normalizeTextForSearch(userRequest).filter(
+    (token) => token.length >= 3
+  );
+  if (!tokens.length) return 0;
+
+  const rawScore = lexicalScoreProduct(product, tokens);
+  return clampNumber(rawScore / 35, 0, 1, 0);
+};
+
+const genericProductScore = ({
+  product,
+  userRequest,
+  budgetMode = "balanced",
+  reasonBoost = 0,
+  verifierScore = null,
+}) => {
+  const semantic = clampNumber(getProductSemanticScore(product), 0, 1, 0);
+  const retrieval = clampNumber(getProductRetrievalScore(product), 0, 1, 0);
+  const lexical = lexicalRelevanceScore(product, userRequest);
+  const eta = etaScore(product);
+  const price = priceFitScore(product, budgetMode);
+  const verifier =
+    verifierScore == null ? null : clampNumber(verifierScore / 100, 0, 1, 0);
+
+  if (verifier != null) {
+    return Math.round(
+      (verifier * 0.66 +
+        semantic * 0.2 +
+        lexical * 0.09 +
+        eta * 0.03 +
+        price * 0.02) *
+        100 +
+        reasonBoost
+    );
+  }
+
+  return Math.round(
+    (semantic * 0.6 +
+      lexical * 0.28 +
+      retrieval * 0.07 +
+      eta * 0.03 +
+      price * 0.02) *
+      100 +
+      reasonBoost
+  );
+};
+
+const attachInternalProductScore = ({
+  product,
+  userRequest,
+  budgetMode,
+  verifierScore,
+}) => ({
+  ...product,
+  __finalScore: genericProductScore({
+    product,
+    userRequest,
+    budgetMode,
+    verifierScore,
+  }),
+  __verificationScore: verifierScore == null ? undefined : verifierScore,
+});
+
+const buildVerifierPrompt = ({
+  userRequest,
+  budgetMode,
+  decisionMode,
+  panicMode,
+  needCategory,
+  products,
+  productReasons,
+  shoppingIntentContext,
+  userMemory,
+}) => {
+  const skippedProductsLine = userMemory?.skippedProducts?.length
+    ? `
+User has previously skipped these products: ${JSON.stringify(
+        userMemory.skippedProducts
+      )}. If a candidate product name closely matches any of these, reduce its score by 25 points and keep it only if it is clearly necessary.`
+    : "";
+
+  return `
+You are the final quality gate for an Amazon Now instant cart.
+Your job is to remove weak, filler, indirectly related, or merely fast products.
+
+User situation: ${userRequest}
+Need category from planner: ${needCategory}
+User controls: budgetMode=${budgetMode}, decisionMode=${decisionMode}, panicMode=${panicMode}
+Retrieval intent: ${shoppingIntentContext?.shoppingIntentText || userRequest}
+Required product roles: ${JSON.stringify(shoppingIntentContext?.requiredProductRoles || [])}
+Excluded filler traits: ${JSON.stringify(shoppingIntentContext?.excludedProductTraits || [])}
+
+Candidate products:
+${JSON.stringify(
+  products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    category: product.category,
+    aisle: product.aisle,
+    price: product.price,
+    etaMinutes: product.etaMinutes,
+    tags: product.tags,
+    searchText: product.searchText,
+    searchText: product.searchText,
+    semanticScore: Number(getProductSemanticScore(product).toFixed(4)),
+    plannerReason: productReasons?.[product.id] || "",
+  }))
+)}
+
+Rules:
+1. Keep a product only if an average customer would immediately use it for this exact situation.
+2. The product must map clearly to at least one requiredProductRole. If it does not, score it below 35 and do not keep it.
+3. Do not keep products only because they are cheap, fast, broadly useful, or vaguely related.
+4. A smaller accurate cart is better than a larger cart with filler. It is okay to keep only 1 to 4 products.
+5. Keep at most 7 products.
+6. optionalProductIds are only for genuinely useful extras that were not kept.
+7. Use only IDs from the candidate list. Do not invent IDs.
+8. productScores must reflect direct usefulness only, not speed. 90-100 = essential, 70-89 = useful, 40-69 = weak, below 40 = remove.
+9. productReasons must explain the actual job the product does. Never use generic reasons like "directly helps".
+
+Return ONLY valid JSON:
+{
+  "keptProductIds": ["valid_product_id"],
+  "optionalProductIds": ["valid_product_id"],
+  "productScores": { "valid_product_id": 0 },
+  "productReasons": { "valid_product_id": "short user-facing reason" },
+  "summary": "one short sentence"
+}
+${skippedProductsLine}
+`;
+};
+
+const parseVerifierResult = ({
+  verifierJson,
+  products,
+  fallbackProducts,
+  userRequest,
+  rankingText,
+  budgetMode,
+}) => {
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const validIds = new Set(productById.keys());
+
+  const uniqueValidIds = (ids, max) =>
+    Array.isArray(ids)
+      ? ids
+          .map((id) => String(id || "").trim())
+          .filter((id) => validIds.has(id))
+          .filter((id, index, arr) => arr.indexOf(id) === index)
+          .slice(0, max)
+      : [];
+
+  const rawScores =
+    verifierJson?.productScores &&
+    typeof verifierJson.productScores === "object"
+      ? verifierJson.productScores
+      : {};
+
+  const rawReasons =
+    verifierJson?.productReasons &&
+    typeof verifierJson.productReasons === "object"
+      ? verifierJson.productReasons
+      : {};
+
+  let keptIds = uniqueValidIds(verifierJson?.keptProductIds, 7);
+  const optionalIds = uniqueValidIds(
+    verifierJson?.optionalProductIds,
+    3
+  ).filter((id) => !keptIds.includes(id));
+
+  const scoreForId = (id) =>
+    clampNumber(
+      rawScores[id],
+      0,
+      100,
+      genericProductScore({
+        product: productById.get(id),
+        userRequest: rankingText || userRequest,
+        budgetMode,
+      })
+    );
+
+  keptIds = keptIds.filter((id) => scoreForId(id) >= 72);
+
+  if (keptIds.length < 1) {
+    keptIds = fallbackProducts
+      .filter(
+        (product) =>
+          Number(product.__finalScore || 0) >= 62 ||
+          getProductSemanticScore(product) >= 0.38
+      )
+      .map((product) => product.id)
+      .filter((id) => validIds.has(id))
+      .slice(0, 4);
+  }
+
+  const productReasons = {};
+  [...keptIds, ...optionalIds].forEach((id) => {
+    productReasons[id] = safeString(
+      rawReasons[id],
+      "Useful for the situation described."
+    );
+  });
+
+  return {
+    keptIds,
+    optionalIds: optionalIds.filter((id) => scoreForId(id) >= 76),
+    productScores: Object.fromEntries(
+      keptIds.map((id) => [id, scoreForId(id)])
+    ),
+    productReasons,
+    summary: safeString(
+      verifierJson?.summary,
+      "Kept only products that directly help with the situation."
+    ),
+  };
+};
+
+const localGenericProductFilter = ({
+  products,
+  userRequest,
+  budgetMode,
+  limit = 7,
+}) => {
+  const scored = products
+    .map((product) => ({
+      product,
+      score: genericProductScore({ product, userRequest, budgetMode }),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (
+        Number(a.product.etaMinutes || 999) -
+        Number(b.product.etaMinutes || 999)
+      );
+    });
+
+  const strong = scored
+    .filter(
+      (entry) =>
+        entry.score >= 54 || getProductSemanticScore(entry.product) >= 0.4
+    )
+    .map((entry) => entry.product);
+
+  const fallback = scored
+    .filter(
+      (entry) =>
+        entry.score >= 45 || getProductSemanticScore(entry.product) >= 0.34
+    )
+    .slice(0, Math.min(4, scored.length))
+    .map((entry) => entry.product);
+  const selected = strong.length ? strong : fallback;
+
+  return selected.slice(0, limit).map((product) =>
+    attachInternalProductScore({
+      product,
+      userRequest,
+      budgetMode,
+      verifierScore: genericProductScore({ product, userRequest, budgetMode }),
+    })
+  );
+};
+
+const verifyAndRerankProducts = async ({
+  userRequest,
+  budgetMode,
+  decisionMode,
+  panicMode,
+  needCategory,
+  products,
+  productReasons,
+  shoppingIntentContext,
+  userMemory,
+}) => {
+  const dedupedProducts = [];
+  const seen = new Set();
+
+  products.forEach((product) => {
+    if (!product?.id || seen.has(product.id)) return;
+    seen.add(product.id);
+    dedupedProducts.push(product);
+  });
+
+  const rankingText = buildRetrievalTextFromIntent(
+    userRequest,
+    shoppingIntentContext
+  );
+
+  const fallbackProducts = localGenericProductFilter({
+    products: dedupedProducts,
+    userRequest: rankingText,
+    budgetMode,
+    limit: 7,
+  });
+
+  const highConfidenceProducts = fallbackProducts.filter(
+    (product) =>
+      product.available !== false &&
+      getProductSemanticScore(product) >= 0.82 &&
+      Number(product.__finalScore || 0) >= 72
+  );
+
+  if (
+    highConfidenceProducts.length >= 3 &&
+    highConfidenceProducts.length <= 6
+  ) {
+    console.log(
+      "LLM product verifier skipped; using high-confidence semantic matches:",
+      {
+        count: highConfidenceProducts.length,
+      }
+    );
+
+    return {
+      products: highConfidenceProducts.slice(0, 6),
+      optionalProducts: [],
+      productReasons: {},
+      summary: "Selected high-confidence semantic matches directly.",
+      usedVerifier: false,
+    };
+  }
+
+  if (dedupedProducts.length < 2) {
+    return {
+      products: fallbackProducts,
+      optionalProducts: [],
+      productReasons: {},
+      summary: "Used the strongest available matches from the product catalog.",
+      usedVerifier: false,
+    };
+  }
+
+  try {
+    const verifierText = await callBedrockConverse({
+      prompt: buildVerifierPrompt({
+        userRequest,
+        budgetMode,
+        decisionMode,
+        panicMode,
+        needCategory,
+        products: dedupedProducts,
+        productReasons,
+        shoppingIntentContext,
+        userMemory,
+      }),
+      modelId: BEDROCK_PLANNER_MODEL_ID,
+      maxTokens: 520,
+      temperature: 0.05,
+      topP: 0.5,
+    });
+
+    const verifierJson = parseJsonObjectFromText(verifierText);
+    const parsed = parseVerifierResult({
+      verifierJson,
+      products: dedupedProducts,
+      fallbackProducts,
+      userRequest,
+      rankingText,
+      budgetMode,
+    });
+
+    const productById = new Map(
+      dedupedProducts.map((product) => [product.id, product])
+    );
+    const verifiedProducts = parsed.keptIds
+      .map((id) => productById.get(id))
+      .filter(Boolean)
+      .map((product) =>
+        attachInternalProductScore({
+          product,
+          userRequest: rankingText,
+          budgetMode,
+          verifierScore: parsed.productScores[product.id],
+        })
+      )
+      .sort(
+        (a, b) => Number(b.__finalScore || 0) - Number(a.__finalScore || 0)
+      );
+
+    const optionalProducts = parsed.optionalIds
+      .map((id) => productById.get(id))
+      .filter(Boolean)
+      .map((product) =>
+        attachInternalProductScore({
+          product,
+          userRequest: rankingText,
+          budgetMode,
+          verifierScore: 78,
+        })
+      );
+
+    return {
+      products: verifiedProducts.length ? verifiedProducts : fallbackProducts,
+      optionalProducts,
+      productReasons: parsed.productReasons,
+      summary: parsed.summary,
+      usedVerifier: true,
+    };
+  } catch (error) {
+    console.warn(
+      "LLM product verifier skipped; using generic semantic scoring:",
+      {
+        message: error.message,
+      }
+    );
+
+    return {
+      products: fallbackProducts,
+      optionalProducts: [],
+      productReasons: {},
+      summary: "Used semantic ranking to keep the strongest direct matches.",
+      usedVerifier: false,
+    };
+  }
+};
+
+const scoreForMode = ({ product, mode, budgetMode }) => {
+  const base = clampNumber(Number(product.__finalScore || 0) / 100, 0, 1, 0);
+  const eta = etaScore(product);
+  const price = priceFitScore(product, budgetMode);
+
+  if (mode === "fastest") return base * 0.72 + eta * 0.28;
+  if (mode === "bestValue") return base * 0.68 + price * 0.22 + eta * 0.1;
+  return base * 0.9 + eta * 0.06 + price * 0.04;
+};
+
+const sortProductsForMode = (products, mode, budgetMode) => {
+  return [...products].sort((a, b) => {
+    const diff =
+      scoreForMode({ product: b, mode, budgetMode }) -
+      scoreForMode({ product: a, mode, budgetMode });
+    if (diff !== 0) return diff;
+    return Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999);
+  });
+};
+
+const rankInventoryByEmbeddings = async (
+  retrievalText,
   inventory,
-  limit = 16
+  limit = 28
 ) => {
   const productsWithEmbeddings = inventory.filter(
     (product) => Array.isArray(product.embedding) && product.embedding.length
@@ -576,18 +1211,20 @@ const rankInventoryByEmbeddings = async (
     return null;
   }
 
-  const requestEmbedding = await generateEmbedding(userRequest);
+  const requestEmbedding = await generateEmbedding(retrievalText);
   if (!requestEmbedding) return null;
 
   const scored = productsWithEmbeddings.map((product) => {
     const semanticScore = cosineSimilarity(requestEmbedding, product.embedding);
-    const eta = Number(product.etaMinutes || 999);
-    const etaBoost = Math.max(0, 25 - eta) / 100;
     const availabilityPenalty = product.available === false ? -1 : 0;
 
     return {
-      product,
-      score: semanticScore + etaBoost + availabilityPenalty,
+      product: {
+        ...product,
+        __semanticScore: semanticScore,
+        __retrievalScore: semanticScore + availabilityPenalty,
+      },
+      score: semanticScore + availabilityPenalty,
     };
   });
 
@@ -604,13 +1241,21 @@ const rankInventoryByEmbeddings = async (
     .slice(0, limit);
 };
 
-const rankInventoryByLexicalFallback = (userRequest, inventory, limit = 16) => {
+const rankInventoryByLexicalFallback = (userRequest, inventory, limit = 28) => {
   const requestTokens = normalizeTextForSearch(userRequest);
 
-  const scored = inventory.map((product) => ({
-    product,
-    score: lexicalScoreProduct(product, requestTokens),
-  }));
+  const scored = inventory.map((product) => {
+    const score = lexicalScoreProduct(product, requestTokens);
+    return {
+      product: {
+        ...product,
+        __semanticScore: 0,
+        __retrievalScore: score / 100,
+        __lexicalScore: score,
+      },
+      score,
+    };
+  });
 
   const relevant = scored
     .filter((entry) => entry.score > 0)
@@ -625,7 +1270,12 @@ const rankInventoryByLexicalFallback = (userRequest, inventory, limit = 16) => {
 
   const fastFallback = [...inventory]
     .sort((a, b) => Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999))
-    .slice(0, 10);
+    .slice(0, 6)
+    .map((product) => ({
+      ...product,
+      __semanticScore: 0,
+      __retrievalScore: 0,
+    }));
 
   const merged = [];
   const seen = new Set();
@@ -642,11 +1292,17 @@ const rankInventoryByLexicalFallback = (userRequest, inventory, limit = 16) => {
 const getRelevantInventoryCandidates = async (
   userRequest,
   inventory,
-  limit = 16
+  limit = 28,
+  shoppingIntentContext = null
 ) => {
+  const retrievalText = buildRetrievalTextFromIntent(
+    userRequest,
+    shoppingIntentContext
+  );
+
   try {
     const embeddedCandidates = await rankInventoryByEmbeddings(
-      userRequest,
+      retrievalText,
       inventory,
       limit
     );
@@ -668,7 +1324,7 @@ const getRelevantInventoryCandidates = async (
   }
 
   const fallbackCandidates = rankInventoryByLexicalFallback(
-    userRequest,
+    retrievalText,
     inventory,
     limit
   );
@@ -799,23 +1455,32 @@ const buildSubstitutions = (selectedProducts = [], candidateProducts = []) => {
     .slice(0, 3);
 };
 
-const buildNeedGraph = ({ needCategory, selectedProducts, userRequest }) => {
-  const text = String(userRequest || "").toLowerCase();
-  const productText = selectedProducts
-    .map((product) =>
-      [product.name, product.category, ...(product.tags || [])].join(" ")
-    )
+const productCoversDimension = (product = {}, dimension = "") => {
+  const dimensionTokens = normalizeTextForSearch(dimension).filter(
+    (token) => token.length >= 3
+  );
+  if (!dimensionTokens.length) return false;
+
+  const productText = [
+    product.name,
+    product.category,
+    product.aisle,
+    product.searchText,
+    ...(product.tags || []),
+  ]
+    .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
+  return dimensionTokens.some((token) => productText.includes(token));
+};
+
+const buildNeedGraph = ({ needCategory, selectedProducts, userRequest }) => {
+  const text = String(userRequest || "").toLowerCase();
+
   const categoryDimensions = {
-    birthday_surprise: [
-      "celebration",
-      "sweet/dessert",
-      "gift/personal touch",
-      "decoration",
-    ],
-    travel_packing: ["hygiene", "packing", "hydration", "snack/comfort"],
+    birthday_surprise: ["celebration", "sweet dessert", "gift", "decoration"],
+    travel_packing: ["hygiene", "packing", "hydration", "snack comfort"],
     interview_ready: [
       "grooming",
       "freshness",
@@ -825,13 +1490,15 @@ const buildNeedGraph = ({ needCategory, selectedProducts, userRequest }) => {
     pet_cleanup: ["surface cleanup", "odor control", "hygiene", "disposal"],
     power_cut_prep: [
       "lighting",
-      "battery/power",
+      "battery power",
       "hydration",
-      "comfort/safety",
+      "comfort safety",
     ],
     guest_hosting: ["snacks", "beverages", "serving", "cleanup"],
-    breakfast_rush: ["food", "beverage", "fruit/healthy", "quick prep"],
+    breakfast_rush: ["food", "beverage", "fruit healthy", "quick prep"],
     quick_cleanup: ["absorb", "wipe", "disinfect", "dispose"],
+    first_aid: ["wound care", "cleaning", "protection", "hygiene"],
+    health_comfort: ["symptom relief", "hydration", "hygiene", "comfort"],
   };
 
   const dimensions = categoryDimensions[needCategory] || [
@@ -843,13 +1510,19 @@ const buildNeedGraph = ({ needCategory, selectedProducts, userRequest }) => {
   return {
     primaryNeed: formatNeedCategory(needCategory),
     inferredFrom: text.slice(0, 140),
-    dimensions: dimensions.map((dimension) => ({
-      name: dimension,
-      covered:
-        productText.includes(dimension.split("/")[0].split(" ")[0]) ||
-        selectedProducts.length >= 5,
-      reason: `Checked against selected products for ${dimension}.`,
-    })),
+    dimensions: dimensions.map((dimension) => {
+      const coveringProduct = selectedProducts.find((product) =>
+        productCoversDimension(product, dimension)
+      );
+
+      return {
+        name: dimension,
+        covered: Boolean(coveringProduct),
+        reason: coveringProduct
+          ? `Covered by ${coveringProduct.name}.`
+          : `No selected product directly covers ${dimension}.`,
+      };
+    }),
   };
 };
 
@@ -1000,7 +1673,7 @@ const sanitizeAiSelection = (
   };
 };
 
-const buildFullPlanFromAiSelection = ({
+const buildFullPlanFromAiSelection = async ({
   aiSelection,
   userRequest,
   budgetMode,
@@ -1008,6 +1681,8 @@ const buildFullPlanFromAiSelection = ({
   panicMode,
   userId,
   inventoryCandidates,
+  shoppingIntentContext,
+  userMemory,
   modelId,
   usedFallback,
   startedAt,
@@ -1018,10 +1693,14 @@ const buildFullPlanFromAiSelection = ({
     inventoryCandidates,
     requestContext
   );
+  sanitized.needCategory = getEffectiveNeedCategory(
+    userRequest,
+    sanitized.needCategory
+  );
+
   const productById = new Map(
     inventoryCandidates.map((product) => [product.id, product])
   );
-
   const selectedProducts = [];
   const seen = new Set();
 
@@ -1033,25 +1712,56 @@ const buildFullPlanFromAiSelection = ({
   });
 
   inventoryCandidates.forEach((product) => {
-    if (selectedProducts.length >= 8) return;
+    if (selectedProducts.length >= 24) return;
     if (!product?.id || seen.has(product.id)) return;
     seen.add(product.id);
     selectedProducts.push(product);
   });
 
-  const fastestProducts = [...selectedProducts]
-    .sort((a, b) => Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999))
-    .slice(0, 5);
+  const verification = await verifyAndRerankProducts({
+    userRequest,
+    budgetMode,
+    decisionMode,
+    panicMode,
+    needCategory: sanitized.needCategory,
+    products: selectedProducts,
+    productReasons: sanitized.productReasons,
+    shoppingIntentContext,
+    userMemory,
+  });
 
-  const bestValueProducts = [...selectedProducts]
-    .sort((a, b) => {
-      const priceDiff = Number(a.price || 9999) - Number(b.price || 9999);
-      if (priceDiff !== 0) return priceDiff;
-      return Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999);
-    })
-    .slice(0, 5);
+  const verifiedProducts = verification.products.length
+    ? verification.products
+    : localGenericProductFilter({
+        products: selectedProducts,
+        userRequest,
+        budgetMode,
+        limit: 7,
+      });
 
-  const mostCompleteProducts = selectedProducts.slice(0, 7);
+  const reasonMap = {
+    ...sanitized.productReasons,
+    ...verification.productReasons,
+  };
+
+  const fastestProducts = sortProductsForMode(
+    verifiedProducts,
+    "fastest",
+    budgetMode
+  ).slice(0, Math.min(5, verifiedProducts.length));
+
+  const bestValueProducts = sortProductsForMode(
+    verifiedProducts,
+    "bestValue",
+    budgetMode
+  ).slice(0, Math.min(5, verifiedProducts.length));
+
+  const mostCompleteProducts = sortProductsForMode(
+    verifiedProducts,
+    "mostComplete",
+    budgetMode
+  ).slice(0, Math.min(7, verifiedProducts.length));
+
   const categoryTitle = formatNeedCategory(sanitized.needCategory);
 
   const cartModes = {
@@ -1059,27 +1769,28 @@ const buildFullPlanFromAiSelection = ({
       modeLabel: "Fastest",
       cartTitle: `${categoryTitle} Fast Kit`,
       products: fastestProducts,
-      modeReason: "Lowest ETA products from the AI-ranked recommendation set.",
-      itemReason: "Chosen because it can help quickly in this situation.",
-      reasonMap: sanitized.productReasons,
+      modeReason:
+        "Fastest direct matches after semantic retrieval and quality verification.",
+      itemReason: "Directly helps with the situation and can arrive quickly.",
+      reasonMap,
     }),
     bestValue: buildCartModeFromProducts({
       modeLabel: "Best Value",
       cartTitle: `${categoryTitle} Value Kit`,
       products: bestValueProducts,
-      modeReason:
-        "Lower-cost useful products from the AI-ranked recommendation set.",
-      itemReason: "Chosen because it balances usefulness and budget.",
-      reasonMap: sanitized.productReasons,
+      modeReason: "Best price-speed balance from the verified product set.",
+      itemReason:
+        "Directly helps with the situation while keeping value in mind.",
+      reasonMap,
     }),
     mostComplete: buildCartModeFromProducts({
       modeLabel: "Most Complete",
       cartTitle: `${categoryTitle} Complete Kit`,
       products: mostCompleteProducts,
       modeReason:
-        "Broadest useful coverage from the AI-ranked recommendation set.",
-      itemReason: "Chosen because it improves overall need coverage.",
-      reasonMap: sanitized.productReasons,
+        "Broadest coverage from products verified as directly useful.",
+      itemReason: "Adds useful coverage for the situation described.",
+      reasonMap,
     }),
   };
 
@@ -1095,9 +1806,7 @@ const buildFullPlanFromAiSelection = ({
     ...cartModes.mostComplete.items.map((item) => item.productId),
   ]);
 
-  const regretPrevention = sanitized.regretProductIds
-    .map((productId) => productById.get(productId))
-    .filter(Boolean)
+  const regretPrevention = verification.optionalProducts
     .filter((product) => !cartProductIds.has(product.id))
     .slice(0, 3)
     .map((product) => ({
@@ -1106,8 +1815,8 @@ const buildFullPlanFromAiSelection = ({
       price: Number(product.price || 0),
       etaMinutes: Number(product.etaMinutes || 0),
       reason:
-        sanitized.productReasons?.[product.id] ||
-        "A useful supporting item the user may otherwise forget.",
+        reasonMap?.[product.id] ||
+        "A genuinely useful optional item for this situation.",
     }));
 
   const needGraph = buildNeedGraph({
@@ -1128,6 +1837,10 @@ const buildFullPlanFromAiSelection = ({
     selectedEtaMinutes: selectedCart.etaMinutes || 0,
     userRequest,
   });
+
+  const verifierNote = verification.usedVerifier
+    ? " Verified for direct usefulness."
+    : "";
 
   return {
     planId: `plan_${randomUUID()}`,
@@ -1154,8 +1867,15 @@ const buildFullPlanFromAiSelection = ({
     needGraph,
     deadlineSafety,
     coverage,
-    confidence: sanitized.confidence,
-    aiExplanation: sanitized.aiExplanation,
+    confidence: {
+      ...sanitized.confidence,
+      overall: Math.max(
+        sanitized.confidence.overall,
+        verifiedProducts.length >= 3 ? 84 : 76
+      ),
+      reason: `${sanitized.confidence.reason}${verifierNote}`,
+    },
+    aiExplanation: verification.summary || sanitized.aiExplanation,
     checkoutSummary: {
       estimatedTotal: calculateCartTotal(selectedItems),
       itemCount: calculateCartItemCount(selectedItems),
@@ -1190,6 +1910,7 @@ const buildPlannerPrompt = ({
   inventoryCandidates,
   userMemory,
   refinementContext,
+  shoppingIntentContext,
 }) => `
 You are Amazon Now Assist, an AI product-selection planner for urgent quick-commerce.
 
@@ -1206,6 +1927,9 @@ Keep the original goal, but apply this refinement. If the user changes people co
 }
 Time context: ${timeContext.timeOfDay}
 User memory summary: ${JSON.stringify(userMemory)}
+Shopping intent: ${shoppingIntentContext?.shoppingIntentText || userRequest}
+Required product roles: ${JSON.stringify(shoppingIntentContext?.requiredProductRoles || [])}
+Do not select products that do not clearly satisfy one of these roles.
 
 Inventory candidates:
 ${JSON.stringify(
@@ -1217,18 +1941,20 @@ ${JSON.stringify(
     price: product.price,
     etaMinutes: product.etaMinutes,
     tags: product.tags,
+    searchText: product.searchText,
   }))
 )}
 
 Rules:
 1. Use only product IDs from inventory candidates.
 2. Do not invent products or product IDs.
-3. Select 7 to 10 recommendedProductIds, ranked most important first.
-4. Select 0 to 3 regretProductIds only if they are strongly relevant and not already recommended.
-5. productReasons must contain short situation-specific reasons for every recommendedProductId and regretProductId.
-6. needCategory must be specific, such as birthday_surprise, travel_packing, interview_ready, pet_cleanup, power_cut_prep, guest_hosting, breakfast_rush, study_session, health_comfort, quick_cleanup.
-7. recommendedMode should respect decisionMode unless another mode is clearly better.
-8. Keep all text short. No generic reasons like "selected by AI".
+3. Select 3 to 8 recommendedProductIds, ranked by direct usefulness for the situation.
+4. Do not add filler products just to make the cart larger. A smaller accurate cart is better.
+5. Select 0 to 3 regretProductIds only if they are strongly relevant and not already recommended.
+6. productReasons must contain short situation-specific reasons for every recommendedProductId and regretProductId.
+7. needCategory must be specific, such as birthday_surprise, travel_packing, interview_ready, pet_cleanup, power_cut_prep, guest_hosting, breakfast_rush, study_session, health_comfort, quick_cleanup, first_aid.
+8. recommendedMode should respect decisionMode unless another mode is clearly better.
+9. Keep all text short. No generic reasons like "selected by AI".
 
 JSON shape:
 {
@@ -1266,19 +1992,30 @@ const generatePlanWithBedrock = async ({
 }) => {
   const startedAt = Date.now();
   const timeContext = getTimeContext();
+
+  const [shoppingIntentContext, userMemory] = await Promise.all([
+    extractShoppingIntent({
+      userRequest,
+      budgetMode,
+      decisionMode,
+      panicMode,
+    }),
+    getUserMemory(userId).catch((error) => {
+      console.warn("User memory skipped:", { message: error.message });
+      return {
+        previousNeedCategories: [],
+        likedProducts: [],
+        skippedProducts: [],
+      };
+    }),
+  ]);
+
   const inventoryCandidates = await getRelevantInventoryCandidates(
     userRequest,
     inventory,
-    16
+    36,
+    shoppingIntentContext
   );
-  const userMemory = await getUserMemory(userId).catch((error) => {
-    console.warn("User memory skipped:", { message: error.message });
-    return {
-      previousNeedCategories: [],
-      likedProducts: [],
-      skippedProducts: [],
-    };
-  });
 
   console.log("Inventory candidate retrieval:", {
     userRequest,
@@ -1296,6 +2033,7 @@ const generatePlanWithBedrock = async ({
     inventoryCandidates,
     userMemory,
     refinementContext,
+    shoppingIntentContext,
   });
 
   const plannerResult = await callPlannerWithFallback({
@@ -1307,7 +2045,7 @@ const generatePlanWithBedrock = async ({
 
   const aiSelection = parseJsonObjectFromText(plannerResult.text);
 
-  return buildFullPlanFromAiSelection({
+  return await buildFullPlanFromAiSelection({
     aiSelection,
     userRequest,
     budgetMode,
@@ -1315,6 +2053,8 @@ const generatePlanWithBedrock = async ({
     panicMode,
     userId,
     inventoryCandidates,
+    shoppingIntentContext,
+    userMemory,
     modelId: plannerResult.modelId,
     usedFallback: plannerResult.usedFallback,
     startedAt,
@@ -1323,9 +2063,7 @@ const generatePlanWithBedrock = async ({
 
 const inferFallbackNeedMetadata = (userRequest, panicMode) => {
   const needCategory = inferSimpleNeedCategory(userRequest);
-  const fallbackKeywords = normalizeTextForSearch(
-    `${userRequest} ${(SYNONYM_MAP[needCategory] || []).join(" ")}`
-  );
+  const fallbackKeywords = normalizeTextForSearch(userRequest);
 
   return {
     needCategory,
@@ -1334,7 +2072,7 @@ const inferFallbackNeedMetadata = (userRequest, panicMode) => {
       ? "User described a time-sensitive situation."
       : "User requested a useful quick-commerce plan.",
     aiExplanation:
-      "The resilient fallback selected fast, relevant products from live DynamoDB inventory.",
+      "Selected the strongest direct matches from live inventory using semantic and lexical ranking.",
     keywords: fallbackKeywords.length
       ? fallbackKeywords
       : normalizeTextForSearch(userRequest),
@@ -1367,7 +2105,9 @@ const scoreProductForKeywords = (product, keywords) => {
   });
 
   const eta = Number(product.etaMinutes || 999);
-  return score + Math.max(0, 25 - eta) / 5;
+  return (
+    score + Math.max(0, 25 - eta) / 5 + getProductSemanticScore(product) * 30
+  );
 };
 
 const toFallbackCartItem = (product, reason) => ({
@@ -1393,12 +2133,15 @@ const buildDeterministicFallbackPlan = async ({
   const semanticCandidates = await getRelevantInventoryCandidates(
     userRequest,
     inventory,
-    24
+    28
   );
   const scoredProducts = semanticCandidates
     .map((product) => ({
       product,
-      score: scoreProductForKeywords(product, metadata.keywords),
+      score: Math.max(
+        scoreProductForKeywords(product, metadata.keywords),
+        genericProductScore({ product, userRequest, budgetMode })
+      ),
     }))
     .filter((entry) => entry.score > 0)
     .sort((a, b) => {
@@ -1410,29 +2153,31 @@ const buildDeterministicFallbackPlan = async ({
     })
     .map((entry) => entry.product);
 
-  const selectedProducts = [];
-  const seen = new Set();
+  const verifiedProducts = localGenericProductFilter({
+    products: scoredProducts.length ? scoredProducts : semanticCandidates,
+    userRequest,
+    budgetMode,
+    limit: 7,
+  });
 
-  [...scoredProducts, ...semanticCandidates, ...inventory].forEach(
-    (product) => {
-      if (selectedProducts.length >= 8) return;
-      if (!product?.id || seen.has(product.id)) return;
-      seen.add(product.id);
-      selectedProducts.push(product);
-    }
-  );
+  if (verifiedProducts.length < 2) return null;
 
-  if (selectedProducts.length < 3) return null;
+  const fastestProducts = sortProductsForMode(
+    verifiedProducts,
+    "fastest",
+    budgetMode
+  ).slice(0, Math.min(5, verifiedProducts.length));
+  const bestValueProducts = sortProductsForMode(
+    verifiedProducts,
+    "bestValue",
+    budgetMode
+  ).slice(0, Math.min(5, verifiedProducts.length));
+  const mostCompleteProducts = sortProductsForMode(
+    verifiedProducts,
+    "mostComplete",
+    budgetMode
+  ).slice(0, Math.min(7, verifiedProducts.length));
 
-  const fastestProducts = [...selectedProducts]
-    .sort((a, b) => Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999))
-    .slice(0, 5);
-
-  const bestValueProducts = [...selectedProducts]
-    .sort((a, b) => Number(a.price || 9999) - Number(b.price || 9999))
-    .slice(0, 5);
-
-  const mostCompleteProducts = selectedProducts.slice(0, 7);
   const categoryTitle = formatNeedCategory(metadata.needCategory);
 
   const cartModes = {
@@ -1445,10 +2190,10 @@ const buildDeterministicFallbackPlan = async ({
       items: fastestProducts.map((product) =>
         toFallbackCartItem(
           product,
-          `Fast fallback item for ${categoryTitle.toLowerCase()}.`
+          `Fast useful item for ${categoryTitle.toLowerCase()}.`
         )
       ),
-      modeReason: "Fastest relevant products available from live inventory.",
+      modeReason: "Fastest direct matches available from live inventory.",
     },
     bestValue: {
       modeLabel: "Best Value",
@@ -1459,10 +2204,10 @@ const buildDeterministicFallbackPlan = async ({
       items: bestValueProducts.map((product) =>
         toFallbackCartItem(
           product,
-          `Value-focused fallback item for ${categoryTitle.toLowerCase()}.`
+          `Value-focused useful item for ${categoryTitle.toLowerCase()}.`
         )
       ),
-      modeReason: "Lower-cost relevant products available from live inventory.",
+      modeReason: "Lower-cost direct matches available from live inventory.",
     },
     mostComplete: {
       modeLabel: "Most Complete",
@@ -1473,10 +2218,10 @@ const buildDeterministicFallbackPlan = async ({
       items: mostCompleteProducts.map((product) =>
         toFallbackCartItem(
           product,
-          `Coverage fallback item for ${categoryTitle.toLowerCase()}.`
+          `Coverage item for ${categoryTitle.toLowerCase()}.`
         )
       ),
-      modeReason: "Broadest relevant coverage available from live inventory.",
+      modeReason: "Broadest direct coverage available from live inventory.",
     },
   };
 
@@ -1516,7 +2261,7 @@ const buildDeterministicFallbackPlan = async ({
     recommendedMode: selectedMode,
     cartModes,
     regretPrevention: [],
-    substitutions: [],
+    substitutions: buildSubstitutions(mostCompleteProducts, semanticCandidates),
     needGraph,
     deadlineSafety,
     coverage,
@@ -1527,7 +2272,7 @@ const buildDeterministicFallbackPlan = async ({
       budgetFit: budgetMode === "premium" ? 78 : 82,
       completeness: coverage.score,
       reason:
-        "Fallback confidence is based on inventory relevance, speed, and coverage.",
+        "Fallback confidence is based on semantic relevance, speed, and coverage.",
     },
     aiExplanation: metadata.aiExplanation,
     checkoutSummary: {
@@ -1550,7 +2295,7 @@ const buildDeterministicFallbackPlan = async ({
     },
     userId,
     generatedAt: new Date().toISOString(),
-    modelId: "deterministic-fallback",
+    modelId: "semantic-fallback",
     usedFallback: true,
   };
 };
@@ -1888,6 +2633,10 @@ module.exports.saveNowFeedback = async (event) => {
       productName: body.productName || "",
       selectedMode: body.selectedMode || "",
       note: body.note || "",
+      needCategory: body.needCategory || "",
+      urgencyScore: Number(body.urgencyScore || 0),
+      cartMode: body.cartMode || body.selectedMode || "",
+      sessionEtaMinutes: Number(body.sessionEtaMinutes || 0),
       createdAt: new Date().toISOString(),
     };
 
@@ -1905,6 +2654,150 @@ module.exports.saveNowFeedback = async (event) => {
     return jsonResponse(500, {
       success: false,
       message: "Failed to save feedback",
+      error: error.message,
+    });
+  }
+};
+
+const computeOrderStatus = (order = {}) => {
+  const etaMs =
+    Number(order.plan?.checkoutSummary?.etaMinutes || 15) * 60 * 1000;
+  const createdAtMs = new Date(order.createdAt || Date.now()).getTime();
+  const ageMs = Math.max(0, Date.now() - createdAtMs);
+  const progress = etaMs > 0 ? Math.min(1, ageMs / etaMs) : 0;
+
+  if (progress < 0.05) {
+    return {
+      status: "PLACED",
+      label: "Order placed",
+      emoji: "📋",
+      progressPct: 5,
+    };
+  }
+  if (progress < 0.2) {
+    return {
+      status: "CONFIRMED",
+      label: "Order confirmed",
+      emoji: "✅",
+      progressPct: 20,
+    };
+  }
+  if (progress < 0.5) {
+    return {
+      status: "PICKING",
+      label: "Picking your items",
+      emoji: "🧺",
+      progressPct: 50,
+    };
+  }
+  if (progress < 0.85) {
+    return {
+      status: "OUT_FOR_DELIVERY",
+      label: "On the way",
+      emoji: "🛵",
+      progressPct: 85,
+    };
+  }
+  return {
+    status: "DELIVERED",
+    label: "Delivered",
+    emoji: "🏠",
+    progressPct: 100,
+  };
+};
+
+module.exports.trackNowOrder = async (event) => {
+  try {
+    const orderId =
+      event.pathParameters?.orderId || event.queryStringParameters?.orderId;
+    if (!orderId) {
+      return jsonResponse(400, {
+        success: false,
+        message: "orderId is required",
+      });
+    }
+
+    const orders = await scanByEntityType("ORDER", 500);
+    const order = orders.find((item) => item.id === orderId);
+
+    if (!order) {
+      return jsonResponse(404, { success: false, message: "Order not found" });
+    }
+
+    const tracking = computeOrderStatus(order);
+
+    return jsonResponse(200, {
+      success: true,
+      orderId,
+      ...tracking,
+      etaMinutes: order.plan?.checkoutSummary?.etaMinutes || 15,
+      createdAt: order.createdAt,
+    });
+  } catch (error) {
+    console.error("trackNowOrder error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to track order",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.embedProducts = async () => {
+  try {
+    const products = await queryProducts(300);
+    const unembedded = products.filter(
+      (product) =>
+        !Array.isArray(product.embedding) || !product.embedding.length
+    );
+
+    console.log(
+      `Embedding ${unembedded.length} products (${products.length - unembedded.length} already embedded).`
+    );
+
+    let embedded = 0;
+    let failed = 0;
+
+    for (const product of unembedded) {
+      try {
+        const embedding = await generateEmbedding(
+          buildProductEmbeddingText(product)
+        );
+        await docClient.send(
+          new PutCommand({
+            TableName: ITEMS_TABLE,
+            Item: {
+              ...product,
+              embedding,
+              embeddedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          })
+        );
+        embedded += 1;
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      } catch (error) {
+        failed += 1;
+        console.warn(`Embedding failed for ${product.id}:`, {
+          message: error.message,
+        });
+      }
+    }
+
+    inventoryCache = { items: null, fetchedAt: 0 };
+
+    return jsonResponse(200, {
+      success: true,
+      embedded,
+      failed,
+      total: products.length,
+      embeddingModelId: BEDROCK_EMBEDDING_MODEL_ID,
+    });
+  } catch (error) {
+    console.error("embedProducts error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to embed products",
       error: error.message,
     });
   }
