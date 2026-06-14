@@ -23,9 +23,9 @@ type StoreProduct = NowProduct;
 const quickPrompts = [
   "Finger cut while cooking",
   "4 friends are coming in 30 minutes",
-  "I have an interview in 1 hour",
-  "I need breakfast for two tomorrow morning",
-  "My dog made a mess in the living room",
+  "Interview in 1 hour",
+  "Breakfast for 2, tomorrow morning",
+  "Dog made a mess",
   "There may be a power cut tonight",
 ];
 
@@ -304,7 +304,7 @@ function DeckCard({
           {productEmoji(item.name)}
         </div>
 
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="mt-2 flex items-center justify-between gap-3">
           <div>
             <p className="text-3xl font-black text-slate-950">
               {formatPrice(item.price)}
@@ -317,7 +317,7 @@ function DeckCard({
           </p>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-2 grid grid-cols-2 gap-3">
           <button
             onClick={onSkip}
             disabled={disabled}
@@ -338,6 +338,158 @@ function DeckCard({
   );
 }
 
+function getWhileYouWaitSteps(plan: NowPlan) {
+  const category = String(plan.needCategory || "").toLowerCase();
+  const request = String(plan.userRequest || "").toLowerCase();
+  const text = `${category} ${request}`;
+
+  if (
+    text.includes("first") ||
+    text.includes("aid") ||
+    text.includes("cut") ||
+    text.includes("wound") ||
+    text.includes("injury") ||
+    text.includes("bleeding") ||
+    text.includes("health_emergency")
+  ) {
+    return [
+      "Rinse gently with clean water if possible.",
+      "Apply light pressure with a clean cloth or tissue.",
+      "Use a bandage after bleeding slows.",
+      "Seek medical help if the cut is deep or bleeding does not slow.",
+    ];
+  }
+
+  if (
+    text.includes("cold") ||
+    text.includes("fever") ||
+    text.includes("throat")
+  ) {
+    return [
+      "Sip water regularly.",
+      "Rest in a comfortable position.",
+      "Monitor symptoms and seek care if they worsen.",
+    ];
+  }
+
+  return [];
+}
+
+function CartModeComparison({
+  plan,
+  selectedMode,
+  onSelectMode,
+}: {
+  plan: NowPlan;
+  selectedMode: DecisionMode;
+  onSelectMode: (mode: DecisionMode) => void;
+}) {
+  const modes: DecisionMode[] = ["fastest", "bestValue", "mostComplete"];
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {modes.map((mode) => {
+        const cart = plan.cartModes[mode];
+        const selected = selectedMode === mode;
+        const total = getCartTotal(cart.items || []);
+
+        return (
+          <button
+            type="button"
+            key={mode}
+            onClick={() => onSelectMode(mode)}
+            className={`rounded-xl border p-3 text-left transition ${
+              selected
+                ? "border-amber-400 bg-amber-50 shadow-sm"
+                : "border-slate-200 bg-white hover:bg-slate-50"
+            }`}
+          >
+            <p className="text-[10px] font-black uppercase text-slate-500">
+              {cart.modeLabel}
+            </p>
+            <p className="mt-1 text-base font-black text-slate-950">
+              {formatPrice(total)}
+            </p>
+            <p className="mt-0.5 text-[11px] font-bold text-emerald-700">
+              {cart.etaMinutes}m · {cart.items.length} items
+            </p>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function OrderProgress({ order }: { order: NowOrder }) {
+  const stages = [
+    { label: "Placed", icon: "📋" },
+    { label: "Confirmed", icon: "✅" },
+    { label: "Picking", icon: "🧺" },
+    { label: "On the way", icon: "🛵" },
+    { label: "Delivered", icon: "🏠" },
+  ];
+
+  const [stageIndex, setStageIndex] = useState(0);
+
+  useEffect(() => {
+    const created = order.createdAt
+      ? new Date(order.createdAt).getTime()
+      : Date.now();
+    const elapsed = Math.max(0, Date.now() - created);
+    const initialStage =
+      elapsed > 90000
+        ? 4
+        : elapsed > 45000
+          ? 3
+          : elapsed > 20000
+            ? 2
+            : elapsed > 8000
+              ? 1
+              : 0;
+    setStageIndex(initialStage);
+
+    const timers = [8000, 20000, 45000, 90000].map((delay, index) =>
+      window.setTimeout(
+        () => setStageIndex(index + 1),
+        Math.max(0, delay - elapsed)
+      )
+    );
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [order.id, order.createdAt]);
+
+  return (
+    <div className="mt-3 rounded-xl bg-slate-50 p-3">
+      <div className="flex items-center justify-between gap-1">
+        {stages.map((stage, index) => {
+          const active = index <= stageIndex;
+          const current = index === stageIndex;
+
+          return (
+            <div
+              key={stage.label}
+              className="flex flex-1 flex-col items-center text-center"
+            >
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm ${
+                  active
+                    ? "bg-emerald-100 text-emerald-800"
+                    : "bg-white text-slate-400"
+                } ${current ? "ring-2 ring-emerald-300" : ""}`}
+              >
+                {stage.icon}
+              </div>
+              <p className="mt-1 text-[10px] font-bold text-slate-600">
+                {stage.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MiniPlanDetails({ plan }: { plan: NowPlan }) {
   const selectedCart = plan.cartModes[plan.recommendedMode];
   const eta = selectedCart?.etaMinutes || plan.checkoutSummary?.etaMinutes || 0;
@@ -346,15 +498,17 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
   const deadlineSafety = plan.deadlineSafety;
   const needDimensions = plan.needGraph?.dimensions || [];
   const reminder = plan.regretPrevention?.[0];
+  const waitSteps = getWhileYouWaitSteps(plan);
+  const substitution = plan.substitutions?.[0];
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 overflow-scroll">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+          <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">
             Summary
           </p>
-          <h3 className="mt-1 text-base font-black text-slate-950">
+          <h3 className="text-base font-black text-slate-950">
             {formatNeedLabel(plan.needCategory)}
           </h3>
         </div>
@@ -366,15 +520,15 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
         ) : null}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-slate-50 p-3">
+      <div className="mt-1 grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-slate-50 px-3 py-1">
           <p className="text-[10px] font-black uppercase text-slate-500">
             Arrives in
           </p>
           <p className="mt-1 text-lg font-black text-slate-950">{eta} min</p>
         </div>
 
-        <div className="rounded-xl bg-slate-50 p-3">
+        <div className="rounded-xl bg-slate-50 px-3 py-1">
           <p className="text-[10px] font-black uppercase text-slate-500">
             Total
           </p>
@@ -385,17 +539,50 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
       </div>
 
       {deadlineSafety?.message ? (
-        <p className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-800">
+        <p className="mt-1 rounded-xl bg-emerald-50 px-3 py-1 text-xs font-bold leading-5 text-emerald-800">
           {deadlineSafety.message}
         </p>
       ) : null}
 
+      {waitSteps.length ? (
+        <div className="mt-1 rounded-xl border border-red-100 bg-red-50 px-3 py-1">
+          <p className="text-[10px] font-black uppercase text-red-700">
+            While you wait
+          </p>
+          <ul className="mt-1">
+            {waitSteps.map((step) => (
+              <li
+                key={step}
+                className="flex gap-1 text-xs leading-5 text-red-900"
+              >
+                <span className="text-red-400">•</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {substitution ? (
+        <div className="mt-1 rounded-xl border border-sky-100 bg-sky-50 px-3 py-1">
+          <p className="text-[10px] font-black uppercase text-sky-700">
+            Faster option
+          </p>
+          <p className="mt-1 text-sm font-black text-slate-950">
+            {substitution.suggestedName}
+          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-600">
+            {substitution.reason}
+          </p>
+        </div>
+      ) : null}
+
       {needDimensions.length ? (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-1 flex flex-wrap gap-1">
           {needDimensions.slice(0, 4).map((dimension) => (
             <span
               key={dimension.name}
-              className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-600"
+              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold text-slate-600"
             >
               {dimension.covered ? "✓ " : ""}
               {formatNeedLabel(dimension.name)}
@@ -404,19 +591,15 @@ function MiniPlanDetails({ plan }: { plan: NowPlan }) {
         </div>
       ) : null}
 
-      {reminder ? (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+      {/* {reminder ? (
+        <div className="mt-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1">
           <p className="text-[10px] font-black uppercase text-amber-700">
             Also useful
           </p>
-          <p className="mt-1 text-sm font-black text-slate-950">
-            {reminder.name}
-          </p>
-          <p className="mt-1 text-xs leading-5 text-slate-600">
-            {reminder.reason}
-          </p>
+          <p className="text-sm font-black text-slate-950">{reminder.name}</p>
+          <p className="text-xs leading-5 text-slate-600">{reminder.reason}</p>
         </div>
-      ) : null}
+      ) : null} */}
     </div>
   );
 }
@@ -427,6 +610,7 @@ function CartDrawer({
   items,
   onRemove,
   onCheckout,
+  onShare,
   isCheckingOut,
   checkoutMessage,
 }: {
@@ -435,6 +619,7 @@ function CartDrawer({
   items: NowCartItem[];
   onRemove: (productId: string) => void;
   onCheckout: () => void;
+  onShare: () => void;
   isCheckingOut: boolean;
   checkoutMessage: string;
 }) {
@@ -457,13 +642,13 @@ function CartDrawer({
           <div>
             <h2 className="text-lg font-black text-slate-950">Cart</h2>
             <p className="text-xs text-slate-500">
-              {count} items · {eta || "--"} min
+              {count} items · {eta ? `${eta} min` : "--"}
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-700 hover:bg-slate-100"
           >
             Close
           </button>
@@ -494,7 +679,7 @@ function CartDrawer({
 
                 <button
                   onClick={() => onRemove(item.productId)}
-                  className="h-fit rounded-full bg-slate-100 px-2 py-1 text-xs font-black text-slate-600"
+                  className="h-fit rounded-full bg-red-100 px-2 py-1 text-xs font-black text-red-900 hover:bg-red-200"
                 >
                   Remove
                 </button>
@@ -521,13 +706,22 @@ function CartDrawer({
             </p>
           </div>
 
-          <button
-            onClick={onCheckout}
-            disabled={!items.length || isCheckingOut}
-            className="w-full rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isCheckingOut ? "Placing order..." : "Checkout"}
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onShare}
+              disabled={!items.length}
+              className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Share cart
+            </button>
+            <button
+              onClick={onCheckout}
+              disabled={!items.length || isCheckingOut}
+              className="rounded-xl bg-amber-400 px-5 py-3 text-sm font-black text-slate-950 hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isCheckingOut ? "Placing..." : "Checkout"}
+            </button>
+          </div>
         </div>
       </aside>
     </div>
@@ -562,7 +756,7 @@ function OrdersDrawer({
 
           <button
             onClick={onClose}
-            className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-700"
+            className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-black text-slate-700 hover:bg-slate-100"
           >
             Close
           </button>
@@ -633,6 +827,8 @@ function OrdersDrawer({
                     </div>
                   </div>
 
+                  <OrderProgress order={order} />
+
                   {items.length ? (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {items.slice(0, 5).map((item) => (
@@ -664,6 +860,74 @@ function OrdersDrawer({
   );
 }
 
+function SituationTimeline({ plan }: { plan: NowPlan }) {
+  const steps = [
+    { label: "Situation", value: formatNeedLabel(plan.needCategory) },
+    { label: "Urgency", value: `${plan.urgencyLabel} · ${plan.urgencyScore}%` },
+    {
+      label: "People",
+      value: `${plan.peopleCount} person${plan.peopleCount > 1 ? "s" : ""}`,
+    },
+    { label: "Time", value: plan.timeContext?.timeOfDay || "current" },
+    { label: "Confidence", value: `${plan.confidence?.overall || 0}%` },
+  ].filter((step) => step.value);
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+      <div className="flex w-full items-center justify-between gap-1 text-left">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+            What I understood
+          </p>
+          <p className="mt-0.5 text-xs font-bold text-slate-700">
+            {formatNeedLabel(plan.needCategory)} ·{" "}
+            {plan.confidence?.overall || 0}% confidence
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-1 border-l-2 border-amber-300 pl-3">
+        {steps.map((step, index) => (
+          <div
+            key={step.label}
+            className="flex items-baseline gap-1 opacity-0"
+            style={{
+              animation: "instantCartFadeIn 260ms ease forwards",
+              animationDelay: `${index * 120}ms`,
+            }}
+          >
+            <span className="min-w-[70px] text-[9px] font-black uppercase text-slate-400">
+              {step.label}
+            </span>
+            <span className="text-xs font-bold text-slate-700">
+              {step.value}
+            </span>
+          </div>
+        ))}
+
+        {plan.aiExplanation ? (
+          <p className="pt-1 text-xs italic leading-5 text-slate-500">
+            {plan.aiExplanation}
+          </p>
+        ) : null}
+      </div>
+
+      <style jsx global>{`
+        @keyframes instantCartFadeIn {
+          from {
+            opacity: 0;
+            transform: translateX(-6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 function AssistPanel({
   open,
   onClose,
@@ -682,6 +946,7 @@ function AssistPanel({
   onAddDeckItem,
   onSkipDeckItem,
   onOpenCart,
+  onRefine,
   error,
 }: {
   open: boolean;
@@ -701,8 +966,19 @@ function AssistPanel({
   onAddDeckItem: () => void;
   onSkipDeckItem: () => void;
   onOpenCart: () => void;
+  onRefine: (instruction: string) => Promise<void>;
   error: string;
 }) {
+  const [followUp, setFollowUp] = useState("");
+
+  async function handleRefineSubmit(event: FormEvent) {
+    event.preventDefault();
+    const instruction = followUp.trim();
+    if (!instruction) return;
+    await onRefine(instruction);
+    setFollowUp("");
+  }
+
   if (!open) return null;
 
   const topItem = deckItems[0];
@@ -740,12 +1016,12 @@ function AssistPanel({
                 <p className="text-[11px] font-black uppercase tracking-wide text-amber-600">
                   Tell us what happened
                 </p>
-                <h2 className="mt-1 text-2xl font-black leading-tight text-slate-950">
+                <h2 className="mt-2 text-2xl font-black leading-tight text-slate-950">
                   What do you need?
                 </h2>
               </div>
 
-              <label className="flex cursor-pointer items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 text-xs font-black text-red-700">
+              <label className="flex cursor-pointer items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-black text-red-700">
                 <input
                   type="checkbox"
                   checked={panicMode}
@@ -759,10 +1035,28 @@ function AssistPanel({
             <textarea
               value={userRequest}
               onChange={(event) => setUserRequest(event.target.value)}
-              rows={4}
-              className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium outline-none focus:border-amber-400 focus:bg-white"
+              rows={3}
+              className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-2 text-sm font-medium outline-none focus:border-amber-400 focus:bg-white"
               placeholder="Example: I cut my finger while chopping vegetables"
             />
+
+            <div className="mt-2">
+              <p className="mb-2 text-xs font-black uppercase text-slate-500">
+                Try
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {quickPrompts.map((prompt) => (
+                  <button
+                    type="button"
+                    key={prompt}
+                    onClick={() => setUserRequest(prompt)}
+                    className="rounded-full border border-slate-200 px-2 py-1 text-[9px] font-bold text-slate-600 hover:bg-amber-50"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <div>
@@ -815,24 +1109,6 @@ function AssistPanel({
               </div>
             </div>
 
-            <div className="mt-4">
-              <p className="mb-2 text-xs font-black uppercase text-slate-500">
-                Try
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {quickPrompts.map((prompt) => (
-                  <button
-                    type="button"
-                    key={prompt}
-                    onClick={() => setUserRequest(prompt)}
-                    className="rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-amber-50"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {error ? (
               <div className="mt-3 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-700">
                 {error}
@@ -850,6 +1126,16 @@ function AssistPanel({
 
           <section className="grid min-h-0 gap-4 rounded-2xl bg-white p-4 shadow-sm xl:grid-cols-[minmax(0,1fr)_300px]">
             <div className="flex min-h-[430px] flex-col justify-center">
+              {plan ? (
+                <div className="mx-auto mb-4 w-full max-w-sm">
+                  <CartModeComparison
+                    plan={plan}
+                    selectedMode={decisionMode}
+                    onSelectMode={setDecisionMode}
+                  />
+                </div>
+              ) : null}
+
               {!plan ? (
                 <div className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-3xl">
@@ -907,11 +1193,37 @@ function AssistPanel({
                   </button>
                 </div>
               )}
+
+              {plan ? (
+                <form
+                  onSubmit={handleRefineSubmit}
+                  className="mx-auto mt-4 flex max-w-sm gap-2"
+                >
+                  <input
+                    value={followUp}
+                    onChange={(event) => setFollowUp(event.target.value)}
+                    placeholder='Update cart, e.g. "make it for 6"'
+                    className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-amber-400"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isGenerating || !followUp.trim()}
+                    className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-black text-slate-950 hover:bg-amber-300 disabled:opacity-60"
+                  >
+                    Update
+                  </button>
+                </form>
+              ) : null}
             </div>
 
             <div className="min-h-0">
               {plan ? (
-                <MiniPlanDetails plan={plan} />
+                <>
+                  <div className="mb-3">
+                    <SituationTimeline plan={plan} />
+                  </div>
+                  <MiniPlanDetails plan={plan} />
+                </>
               ) : (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
@@ -1029,6 +1341,26 @@ export default function Home() {
 
   useEffect(() => {
     loadInitialData();
+
+    const sharedCart = new URLSearchParams(window.location.search).get(
+      "sharedCart"
+    );
+    if (sharedCart) {
+      try {
+        const decoded = JSON.parse(window.atob(sharedCart)) as {
+          userRequest?: string;
+          cartItems?: NowCartItem[];
+        };
+
+        if (decoded.cartItems?.length) {
+          setCartItems(decoded.cartItems);
+          setUserRequest(decoded.userRequest || "Shared Amazon Now cart");
+          setCartOpen(true);
+        }
+      } catch (err) {
+        console.warn("Could not open shared cart", err);
+      }
+    }
   }, []);
 
   function addToCart(item: NowCartItem) {
@@ -1065,6 +1397,14 @@ export default function Home() {
     }
 
     setAssistOpen(true);
+  }
+
+  function handleDecisionModeChange(mode: DecisionMode) {
+    setDecisionMode(mode);
+
+    if (plan) {
+      setDeckItems(buildDeckFromPlan(plan, mode));
+    }
   }
 
   async function handleGenerate(event?: FormEvent) {
@@ -1239,6 +1579,83 @@ export default function Home() {
     };
   }
 
+  async function handleRefineCart(instruction: string) {
+    if (!plan || !instruction.trim()) return;
+
+    setError("");
+    setIsGenerating(true);
+
+    try {
+      const currentCart = plan.cartModes[decisionMode]?.items || [];
+      const response = await generateNowPlan({
+        userId: DEMO_USER_ID,
+        userRequest: plan.userRequest || userRequest,
+        budgetMode,
+        decisionMode,
+        panicMode,
+        refinementContext: {
+          originalRequest: plan.userRequest,
+          currentNeedCategory: plan.needCategory,
+          currentPeopleCount: plan.peopleCount,
+          currentCartItems: currentCart.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            etaMinutes: item.etaMinutes,
+          })),
+          instruction: instruction.trim(),
+        },
+      });
+
+      setPlan(response.plan);
+      setDeckItems(buildDeckFromPlan(response.plan, decisionMode));
+
+      await sendNowFeedback({
+        userId: DEMO_USER_ID,
+        planId: response.plan.planId,
+        action: "refined_cart",
+        selectedMode: decisionMode,
+        note: instruction.trim(),
+      }).catch(() => null);
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Failed to update cart.");
+    } finally {
+      setIsGenerating(false);
+    }
+  }
+
+  async function handleShareCart() {
+    if (!cartItems.length) return;
+
+    const payload = window.btoa(
+      JSON.stringify({
+        userRequest:
+          plan?.userRequest || userRequest || "Shared Amazon Now cart",
+        cartItems,
+      })
+    );
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?sharedCart=${payload}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Amazon Now cart",
+          text: "Here is an Amazon Now cart you can review.",
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        setCheckoutMessage("Cart link copied.");
+      }
+    } catch (err) {
+      await navigator.clipboard.writeText(shareUrl).catch(() => null);
+      setCheckoutMessage("Cart link copied.");
+    }
+  }
+
   async function handleCheckout() {
     if (!cartItems.length) return;
 
@@ -1308,9 +1725,9 @@ export default function Home() {
 
           <button
             onClick={() => setOrdersOpen(true)}
-            className="hidden min-w-fit rounded-md border border-slate-600 px-3 py-2 text-xs font-black md:block"
+            className="min-w-fit rounded-md border border-slate-600 px-3 py-2 text-xs font-black sm:block"
           >
-            Orders {orders.length}
+            My Orders {orders.length}
           </button>
 
           <button
@@ -1363,16 +1780,15 @@ export default function Home() {
       </section>
 
       <div className="mx-auto max-w-7xl px-4 py-5">
-        <section className="rounded-2xl bg-white p-6 text-center shadow-sm md:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+        <section className="rounded-2xl bg-cyan-100 p-6 text-center shadow-sm md:p-10">
+          <p className="text-small font-black uppercase tracking-[0.2em] text-slate-500">
             Instant Cart
           </p>
           <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
-            Need something now?
+            Need it now? Let AI build your cart.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600 md:text-base">
-            Describe what happened. Review the suggested items. Add what you
-            need.
+            Describe the situation. Review the essentials. Checkout faster.
           </p>
 
           <button
@@ -1402,7 +1818,10 @@ export default function Home() {
         <section className="mt-5 space-y-5">
           {productsByAisle.length ? (
             productsByAisle.map(([aisle, aisleProducts]) => (
-              <div key={aisle} className="rounded-2xl bg-white p-4 shadow-sm">
+              <div
+                key={aisle}
+                className="rounded-2xl bg-yellow-50 p-4 shadow-sm"
+              >
                 <div className="mb-3 flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-black text-slate-950">
@@ -1466,7 +1885,7 @@ export default function Home() {
         budgetMode={budgetMode}
         setBudgetMode={setBudgetMode}
         decisionMode={decisionMode}
-        setDecisionMode={setDecisionMode}
+        setDecisionMode={handleDecisionModeChange}
         panicMode={panicMode}
         setPanicMode={setPanicMode}
         onGenerate={handleGenerate}
@@ -1479,6 +1898,7 @@ export default function Home() {
           setAssistOpen(false);
           setCartOpen(true);
         }}
+        onRefine={handleRefineCart}
         error={error}
       />
 
@@ -1488,6 +1908,7 @@ export default function Home() {
         items={cartItems}
         onRemove={removeFromCart}
         onCheckout={handleCheckout}
+        onShare={handleShareCart}
         isCheckingOut={isCheckingOut}
         checkoutMessage={checkoutMessage}
       />

@@ -9,6 +9,7 @@ const {
 const {
   BedrockRuntimeClient,
   ConverseCommand,
+  InvokeModelCommand,
 } = require("@aws-sdk/client-bedrock-runtime");
 
 const AWS_REGION = process.env.AWS_REGION || "ap-south-1";
@@ -20,6 +21,10 @@ const BEDROCK_FALLBACK_MODEL_ID =
   process.env.BEDROCK_FALLBACK_MODEL_ID || "amazon.nova-pro-v1:0";
 const BEDROCK_FAST_MODEL_ID =
   process.env.BEDROCK_FAST_MODEL_ID || "amazon.nova-micro-v1:0";
+const BEDROCK_EMBEDDING_MODEL_ID =
+  process.env.BEDROCK_EMBEDDING_MODEL_ID || "amazon.titan-embed-text-v2:0";
+const ENABLE_EMBEDDING_RANKING =
+  process.env.ENABLE_EMBEDDING_RANKING !== "false";
 
 const PRODUCT_INDEX_NAME = "EntityTypeAisleIndex";
 const USER_INDEX_NAME = "UserCreatedAtIndex";
@@ -167,6 +172,125 @@ const callBedrockConverse = async ({
       .join("")
       .trim() || ""
   );
+};
+
+const embeddingCache = new Map();
+
+const buildProductEmbeddingText = (product = {}) => {
+  return [
+    product.name,
+    product.category,
+    product.aisle,
+    ...(product.tags || []),
+    product.searchText,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 1500);
+};
+
+const decodeBedrockBody = (body) => {
+  if (!body) return "{}";
+  if (typeof body.transformToString === "function") {
+    return body.transformToString();
+  }
+  return Buffer.from(body).toString("utf8");
+};
+
+const generateEmbedding = async (text) => {
+  const inputText = safeString(text).slice(0, 2000);
+  if (!inputText) return null;
+
+  const cacheKey = inputText.toLowerCase();
+  if (embeddingCache.has(cacheKey)) return embeddingCache.get(cacheKey);
+
+  const response = await bedrockClient.send(
+    new InvokeModelCommand({
+      modelId: BEDROCK_EMBEDDING_MODEL_ID,
+      contentType: "application/json",
+      accept: "application/json",
+      body: JSON.stringify({
+        inputText,
+        dimensions: 512,
+        normalize: true,
+      }),
+    })
+  );
+
+  const rawBody = await decodeBedrockBody(response.body);
+  const parsed = JSON.parse(rawBody);
+  const embedding = parsed.embedding || parsed.embeddings?.[0];
+
+  if (!Array.isArray(embedding) || !embedding.length) {
+    throw new Error(
+      "Titan embedding response did not include an embedding array."
+    );
+  }
+
+  embeddingCache.set(cacheKey, embedding);
+
+  if (embeddingCache.size > 100) {
+    const firstKey = embeddingCache.keys().next().value;
+    embeddingCache.delete(firstKey);
+  }
+
+  return embedding;
+};
+
+const cosineSimilarity = (a = [], b = []) => {
+  const length = Math.min(a.length, b.length);
+  if (!length) return 0;
+
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    const x = Number(a[index] || 0);
+    const y = Number(b[index] || 0);
+    dot += x * y;
+    normA += x * x;
+    normB += y * y;
+  }
+
+  if (!normA || !normB) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+};
+
+const stripProductEmbedding = (product) => {
+  const { embedding, ...safeProduct } = product || {};
+  return safeProduct;
+};
+
+const lexicalScoreProduct = (product, requestTokens) => {
+  const name = String(product.name || "").toLowerCase();
+  const tags = (product.tags || []).map((tag) =>
+    String(tag || "").toLowerCase()
+  );
+  const searchableText = [
+    product.name,
+    product.category,
+    product.aisle,
+    product.searchText,
+    ...tags,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  let score = 0;
+
+  requestTokens.forEach((token) => {
+    if (!token) return;
+    if (name.includes(token)) score += 10;
+    if (tags.some((tag) => tag.includes(token))) score += 7;
+    if (searchableText.includes(token)) score += 4;
+  });
+
+  const eta = Number(product.etaMinutes || 999);
+  const etaBoost = Math.max(0, 25 - eta) / 8;
+  const availabilityPenalty = product.available === false ? -50 : 0;
+
+  return score + etaBoost + availabilityPenalty;
 };
 
 const callPlannerWithFallback = async ({
@@ -394,135 +518,6 @@ const getUserMemory = async (userId) => {
   };
 };
 
-const SYNONYM_MAP = {
-  dog: ["pet", "cleaning", "odor", "mess", "wipes", "floor", "disinfectant"],
-  cat: ["pet", "cleaning", "odor", "mess", "wipes", "litter"],
-  pet: ["pet", "cleaning", "odor", "mess", "wipes"],
-  mess: ["cleaning", "wipes", "garbage", "odor", "cloth", "floor"],
-  spill: ["cleaning", "tissues", "cloth", "surface", "stain", "paper"],
-  coffee: ["cleaning", "stain", "desk", "tissues", "cloth", "meeting"],
-  power: ["torch", "battery", "charging", "emergency", "water", "candle"],
-  cut: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-    "medical",
-    "health",
-  ],
-  rain: ["umbrella", "rain", "weather", "travel", "poncho"],
-  guests: ["snacks", "drinks", "cups", "plates", "tissues", "serving"],
-  guest: ["snacks", "drinks", "cups", "plates", "tissues", "serving"],
-  friends: ["snacks", "drinks", "cups", "plates", "tissues", "serving"],
-  friend: ["snacks", "drinks", "cups", "plates", "tissues", "serving"],
-  party: ["snacks", "drinks", "cups", "plates", "decoration", "dessert"],
-  birthday: [
-    "birthday",
-    "cake",
-    "candles",
-    "gift",
-    "party",
-    "decoration",
-    "sweet",
-  ],
-  surprise: ["birthday", "gift", "chocolate", "cake", "decoration", "party"],
-  breakfast: ["milk", "bread", "eggs", "banana", "juice", "cereal", "oats"],
-  interview: [
-    "grooming",
-    "mints",
-    "notebook",
-    "pen",
-    "deodorant",
-    "comb",
-    "formal",
-  ],
-  presentable: ["grooming", "deodorant", "comb", "mints", "face", "hair"],
-  meeting: ["grooming", "cleaning", "notebook", "pen", "coffee", "earphones"],
-  baby: ["baby", "diaper", "wipes", "lotion", "bottle"],
-  travel: [
-    "travel",
-    "packing",
-    "toothbrush",
-    "water",
-    "pouch",
-    "lock",
-    "towel",
-  ],
-  trip: ["travel", "packing", "toothbrush", "water", "pouch", "lock", "snack"],
-  packing: ["travel", "pouch", "ziplock", "tape", "toothbrush", "towel"],
-  study: ["study", "notebook", "pen", "coffee", "energy", "highlighter"],
-  exam: ["study", "notebook", "pen", "coffee", "energy", "calculator"],
-  project: ["stationery", "tape", "scissors", "marker", "paper", "study"],
-  dinner: ["rice", "pasta", "sauce", "paneer", "cooking", "vegetable"],
-  hungry: ["quick meal", "noodles", "snack", "ready", "soup"],
-  finger: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-    "medical",
-    "health",
-  ],
-  chopping: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-    "medical",
-  ],
-  vegetables: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-  ],
-  bleeding: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-    "medical",
-  ],
-  wound: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "sanitizer",
-    "medical",
-  ],
-  injury: [
-    "first aid",
-    "bandage",
-    "antiseptic",
-    "cotton",
-    "gauze",
-    "wound",
-    "sanitizer",
-    "medical",
-  ],
-  cold: ["wellness", "tissues", "soup", "vapor", "tea"],
-  fever: ["thermometer", "wellness", "ors", "water", "health"],
-  period: ["sanitary", "pads", "hot water", "comfort", "wellness"],
-  gym: ["fitness", "water", "protein", "shaker", "hydration"],
-};
-
 const inferSimpleNeedCategory = (userRequest = "") => {
   const text = String(userRequest).toLowerCase();
 
@@ -553,6 +548,14 @@ const inferSimpleNeedCategory = (userRequest = "") => {
     return "guest_hosting";
   if (text.includes("breakfast") || text.includes("morning meal"))
     return "breakfast_rush";
+  if (
+    text.includes("finger") ||
+    text.includes("cut") ||
+    text.includes("wound") ||
+    text.includes("bleeding") ||
+    text.includes("injury")
+  )
+    return "first_aid";
   if (text.includes("spill") || text.includes("clean")) return "quick_cleanup";
   if (text.includes("exam") || text.includes("study")) return "study_session";
   if (text.includes("cold") || text.includes("fever")) return "health_comfort";
@@ -560,51 +563,54 @@ const inferSimpleNeedCategory = (userRequest = "") => {
   return "urgent_need";
 };
 
-const getRelevantInventoryCandidates = (userRequest, inventory, limit = 16) => {
-  const requestTokens = normalizeTextForSearch(userRequest);
-  const expandedTokens = new Set(requestTokens);
+const rankInventoryByEmbeddings = async (
+  userRequest,
+  inventory,
+  limit = 16
+) => {
+  const productsWithEmbeddings = inventory.filter(
+    (product) => Array.isArray(product.embedding) && product.embedding.length
+  );
 
-  requestTokens.forEach((token) => {
-    (SYNONYM_MAP[token] || []).forEach((synonym) => {
-      normalizeTextForSearch(synonym).forEach((part) =>
-        expandedTokens.add(part)
-      );
-    });
-  });
+  if (!ENABLE_EMBEDDING_RANKING || productsWithEmbeddings.length < 8) {
+    return null;
+  }
 
-  const scored = inventory.map((product) => {
-    const name = String(product.name || "").toLowerCase();
-    const tags = (product.tags || []).map((tag) =>
-      String(tag || "").toLowerCase()
-    );
-    const searchableText = [
-      product.name,
-      product.category,
-      product.aisle,
-      product.searchText,
-      ...tags,
-    ]
-      .join(" ")
-      .toLowerCase();
+  const requestEmbedding = await generateEmbedding(userRequest);
+  if (!requestEmbedding) return null;
 
-    let score = 0;
-
-    expandedTokens.forEach((token) => {
-      if (!token) return;
-      if (name.includes(token)) score += 10;
-      if (tags.some((tag) => tag.includes(token))) score += 7;
-      if (searchableText.includes(token)) score += 4;
-    });
-
+  const scored = productsWithEmbeddings.map((product) => {
+    const semanticScore = cosineSimilarity(requestEmbedding, product.embedding);
     const eta = Number(product.etaMinutes || 999);
-    const etaBoost = Math.max(0, 25 - eta) / 5;
-    const availabilityBoost = product.available === false ? -50 : 0;
+    const etaBoost = Math.max(0, 25 - eta) / 100;
+    const availabilityPenalty = product.available === false ? -1 : 0;
 
     return {
       product,
-      score: score + etaBoost + availabilityBoost,
+      score: semanticScore + etaBoost + availabilityPenalty,
     };
   });
+
+  return scored
+    .filter((entry) => entry.score > 0.08)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return (
+        Number(a.product.etaMinutes || 999) -
+        Number(b.product.etaMinutes || 999)
+      );
+    })
+    .map((entry) => entry.product)
+    .slice(0, limit);
+};
+
+const rankInventoryByLexicalFallback = (userRequest, inventory, limit = 16) => {
+  const requestTokens = normalizeTextForSearch(userRequest);
+
+  const scored = inventory.map((product) => ({
+    product,
+    score: lexicalScoreProduct(product, requestTokens),
+  }));
 
   const relevant = scored
     .filter((entry) => entry.score > 0)
@@ -631,6 +637,45 @@ const getRelevantInventoryCandidates = (userRequest, inventory, limit = 16) => {
   });
 
   return merged.slice(0, limit);
+};
+
+const getRelevantInventoryCandidates = async (
+  userRequest,
+  inventory,
+  limit = 16
+) => {
+  try {
+    const embeddedCandidates = await rankInventoryByEmbeddings(
+      userRequest,
+      inventory,
+      limit
+    );
+    if (embeddedCandidates?.length) {
+      console.log("Candidate ranking used Titan embeddings:", {
+        candidateCount: embeddedCandidates.length,
+        modelId: BEDROCK_EMBEDDING_MODEL_ID,
+      });
+      return embeddedCandidates;
+    }
+  } catch (error) {
+    console.warn(
+      "Embedding candidate ranking skipped; using lexical fallback:",
+      {
+        message: error.message,
+        modelId: BEDROCK_EMBEDDING_MODEL_ID,
+      }
+    );
+  }
+
+  const fallbackCandidates = rankInventoryByLexicalFallback(
+    userRequest,
+    inventory,
+    limit
+  );
+  console.log("Candidate ranking used lexical fallback:", {
+    candidateCount: fallbackCandidates.length,
+  });
+  return fallbackCandidates;
 };
 
 const inferDeadlineMinutes = (userRequest = "") => {
@@ -693,6 +738,66 @@ const calculateCartTotal = (items = []) =>
 
 const calculateCartItemCount = (items = []) =>
   items.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+
+const getTagSet = (product = {}) =>
+  new Set((product.tags || []).map((tag) => String(tag || "").toLowerCase()));
+
+const buildSubstitutions = (selectedProducts = [], candidateProducts = []) => {
+  const selectedIds = new Set(selectedProducts.map((product) => product.id));
+
+  return selectedProducts
+    .filter((product) => Number(product.etaMinutes || 0) >= 20)
+    .map((product) => {
+      const productTags = getTagSet(product);
+
+      const substitute = candidateProducts
+        .filter((candidate) => {
+          if (!candidate?.id || candidate.id === product.id) return false;
+          if (selectedIds.has(candidate.id)) return false;
+          if (
+            Number(candidate.etaMinutes || 999) >=
+            Number(product.etaMinutes || 999)
+          ) {
+            return false;
+          }
+
+          const sameAisle =
+            String(candidate.aisle || "").toLowerCase() ===
+            String(product.aisle || "").toLowerCase();
+
+          const candidateTags = getTagSet(candidate);
+          const sharedTag = [...candidateTags].some((tag) =>
+            productTags.has(tag)
+          );
+
+          return sameAisle || sharedTag;
+        })
+        .sort((a, b) => {
+          const etaDiff =
+            Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999);
+          if (etaDiff !== 0) return etaDiff;
+          return Number(a.price || 9999) - Number(b.price || 9999);
+        })[0];
+
+      if (!substitute) return null;
+
+      const minutesSaved = Math.max(
+        0,
+        Number(product.etaMinutes || 0) - Number(substitute.etaMinutes || 0)
+      );
+
+      return {
+        originalProductId: product.id,
+        originalName: product.name,
+        suggestedProductId: substitute.id,
+        suggestedName: substitute.name,
+        minutesSaved,
+        reason: `${substitute.name} arrives about ${minutesSaved} minutes faster than ${product.name}.`,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+};
 
 const buildNeedGraph = ({ needCategory, selectedProducts, userRequest }) => {
   const text = String(userRequest || "").toLowerCase();
@@ -1042,7 +1147,10 @@ const buildFullPlanFromAiSelection = ({
     recommendedMode: selectedMode,
     cartModes,
     regretPrevention,
-    substitutions: [],
+    substitutions: buildSubstitutions(
+      mostCompleteProducts,
+      inventoryCandidates
+    ),
     needGraph,
     deadlineSafety,
     coverage,
@@ -1081,6 +1189,7 @@ const buildPlannerPrompt = ({
   timeContext,
   inventoryCandidates,
   userMemory,
+  refinementContext,
 }) => `
 You are Amazon Now Assist, an AI product-selection planner for urgent quick-commerce.
 
@@ -1089,6 +1198,12 @@ Return ONLY valid JSON. No markdown. No commentary.
 
 User request: ${userRequest}
 User controls: budgetMode=${budgetMode}, decisionMode=${decisionMode}, panicMode=${panicMode}
+${
+  refinementContext
+    ? `Refinement context: ${JSON.stringify(refinementContext)}
+Keep the original goal, but apply this refinement. If the user changes people count, budget, exclusions, adds another need, or asks to remove expensive items, update the selected product IDs and peopleCount accordingly.`
+    : ""
+}
 Time context: ${timeContext.timeOfDay}
 User memory summary: ${JSON.stringify(userMemory)}
 
@@ -1147,10 +1262,11 @@ const generatePlanWithBedrock = async ({
   panicMode,
   userId,
   inventory,
+  refinementContext,
 }) => {
   const startedAt = Date.now();
   const timeContext = getTimeContext();
-  const inventoryCandidates = getRelevantInventoryCandidates(
+  const inventoryCandidates = await getRelevantInventoryCandidates(
     userRequest,
     inventory,
     16
@@ -1179,6 +1295,7 @@ const generatePlanWithBedrock = async ({
     timeContext,
     inventoryCandidates,
     userMemory,
+    refinementContext,
   });
 
   const plannerResult = await callPlannerWithFallback({
@@ -1262,7 +1379,7 @@ const toFallbackCartItem = (product, reason) => ({
   reason,
 });
 
-const buildDeterministicFallbackPlan = ({
+const buildDeterministicFallbackPlan = async ({
   userRequest,
   budgetMode,
   decisionMode,
@@ -1273,7 +1390,7 @@ const buildDeterministicFallbackPlan = ({
   const startedAt = Date.now();
   const metadata = inferFallbackNeedMetadata(userRequest, panicMode);
 
-  const semanticCandidates = getRelevantInventoryCandidates(
+  const semanticCandidates = await getRelevantInventoryCandidates(
     userRequest,
     inventory,
     24
@@ -1584,6 +1701,10 @@ module.exports.generateNowPlan = async (event) => {
     const budgetMode = validBudgetMode(body.budgetMode || "balanced");
     const decisionMode = validDecisionMode(body.decisionMode || "fastest");
     const panicMode = Boolean(body.panicMode);
+    const refinementContext =
+      body.refinementContext && typeof body.refinementContext === "object"
+        ? body.refinementContext
+        : null;
 
     if (!userRequest) {
       return jsonResponse(400, {
@@ -1612,6 +1733,7 @@ module.exports.generateNowPlan = async (event) => {
           panicMode,
           userId,
           inventory,
+          refinementContext,
         }),
         PLANNER_TIMEOUT_MS,
         "AI_PLANNER_TIMEOUT"
@@ -1624,7 +1746,7 @@ module.exports.generateNowPlan = async (event) => {
         }
       );
 
-      const fallbackPlan = buildDeterministicFallbackPlan({
+      const fallbackPlan = await buildDeterministicFallbackPlan({
         userRequest,
         budgetMode,
         decisionMode,
@@ -1796,7 +1918,7 @@ module.exports.listNowProducts = async (event) => {
     return jsonResponse(200, {
       success: true,
       count: products.length,
-      products,
+      products: products.map(stripProductEmbedding),
     });
   } catch (error) {
     console.error("listNowProducts error:", error);

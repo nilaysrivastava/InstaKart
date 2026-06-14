@@ -16,6 +16,7 @@ provider:
     BEDROCK_PLANNER_MODEL_ID: ${env:BEDROCK_PLANNER_MODEL_ID, 'amazon.nova-pro-v1:0'}
     BEDROCK_FALLBACK_MODEL_ID: amazon.nova-pro-v1:0
     BEDROCK_FAST_MODEL_ID: amazon.nova-micro-v1:0
+    BEDROCK_EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
 
   iam:
     role:
@@ -41,6 +42,7 @@ provider:
             - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0
             - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-text-express-v1
             - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v1
+            - arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0
 
   httpApi:
     cors:
