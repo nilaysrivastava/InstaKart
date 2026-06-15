@@ -15,7 +15,7 @@ export type PreventableEvent = {
 export const DEMO_USER_ID = "demo-user-001";
 
 export const quickPrompts = [
-  "Finger cut while cooking",
+  "I have a party tonight",
   "4 friends are coming in 30 minutes",
   "Interview in 1 hour",
   "Breakfast for 2, tomorrow morning",
