@@ -8,7 +8,7 @@ Amazon Now – Instant Cart is a HackOn with Amazon prototype that reimagines ur
 
 ## Links
 
-- **Demo Video:** https://drive.google.com/file/d/1zaPHkdI_9jAul-5NumaGW08eMzueBlt1/view?usp=sharing
+- **Demo Video:** https://drive.google.com/file/d/1D6Skov5TzY9RffPeIMj02N_qs4DCNugr/view?usp=sharing
 - **Live App:** https://main.d2a6skx8ok931x.amplifyapp.com
 - **Backend API:** https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com
 - **GitHub:** https://github.com/nilaysrivastava/hackon6-amazon-prototype
