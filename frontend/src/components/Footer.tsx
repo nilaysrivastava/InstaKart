@@ -23,7 +23,7 @@ export function Footer({ healthStatus }: { healthStatus: string }) {
 
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-            Demo flow
+            Flow
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {["Describe", "Review", "Add", "Checkout"].map((item) => (
