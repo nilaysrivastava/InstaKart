@@ -56,17 +56,17 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
       ) : null}
 
       {waitSteps.length ? (
-        <div className="mt-1 rounded-xl border border-red-100 bg-red-50 px-3 py-1">
-          <p className="text-[10px] font-black uppercase text-red-700">
-            While you wait
+        <div className="mt-1 rounded-xl border border-amber-100 bg-amber-50 px-3 py-1">
+          <p className="text-[10px] font-black uppercase text-amber-700">
+            While you wait:
           </p>
           <ul className="mt-1">
             {waitSteps.map((step) => (
               <li
                 key={step}
-                className="flex gap-1 text-xs leading-5 text-red-900"
+                className="flex gap-1 text-xs leading-5 text-slate-700"
               >
-                <span className="text-red-400">•</span>
+                <span className="text-amber-500">•</span>
                 <span>{step}</span>
               </li>
             ))}
@@ -74,7 +74,7 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
         </div>
       ) : null}
 
-      {substitution ? (
+      {/* {substitution ? (
         <div className="mt-1 rounded-xl border border-sky-100 bg-sky-50 px-3 py-1">
           <p className="text-[10px] font-black uppercase text-sky-700">
             Faster option
@@ -86,7 +86,7 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
             {substitution.reason}
           </p>
         </div>
-      ) : null}
+      ) : null} */}
 
       {needDimensions.length ? (
         <div className="mt-1 flex flex-wrap gap-1">

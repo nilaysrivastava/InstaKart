@@ -141,32 +141,83 @@ export default function Home() {
     }
   }, []);
 
-  function addToCart(item: NowCartItem) {
+  function addItemsToCart(itemsToAdd: NowCartItem[]) {
+    if (!itemsToAdd.length) return;
+
     setCartItems((current) => {
-      const existing = current.find(
-        (cartItem) => cartItem.productId === item.productId
-      );
+      const merged = [...current];
 
-      if (existing) {
-        return current.map((cartItem) =>
-          cartItem.productId === item.productId
-            ? {
-                ...cartItem,
-                quantity:
-                  Number(cartItem.quantity || 1) + Number(item.quantity || 1),
-              }
-            : cartItem
+      itemsToAdd.forEach((item) => {
+        const existingIndex = merged.findIndex(
+          (cartItem) => cartItem.productId === item.productId
         );
-      }
 
-      return [...current, item];
+        if (existingIndex >= 0) {
+          const existing = merged[existingIndex];
+
+          merged[existingIndex] = {
+            ...existing,
+            quantity:
+              Number(existing.quantity || 1) + Number(item.quantity || 1),
+            etaMinutes: Math.min(
+              Number(existing.etaMinutes || item.etaMinutes || 0),
+              Number(item.etaMinutes || existing.etaMinutes || 0)
+            ),
+          };
+          return;
+        }
+
+        merged.push({
+          ...item,
+          quantity: Number(item.quantity || 1),
+        });
+      });
+
+      return merged;
     });
+  }
+
+  function addToCart(item: NowCartItem) {
+    addItemsToCart([item]);
   }
 
   function removeFromCart(productId: string) {
     setCartItems((current) =>
       current.filter((item) => item.productId !== productId)
     );
+  }
+
+  function clearCart() {
+    setCartItems([]);
+    setCheckoutMessage("");
+  }
+
+  async function handleReorderOrder(order: NowOrder) {
+    const selectedMode = (order.selectedMode ||
+      order.plan?.recommendedMode ||
+      "fastest") as DecisionMode;
+    const selectedCart = order.plan?.cartModes?.[selectedMode];
+    const reorderItems = selectedCart?.items || [];
+
+    if (!reorderItems.length) return;
+
+    setPlan(order.plan);
+    setDecisionMode(selectedMode);
+    setUserRequest(order.plan?.userRequest || "Reordered Amazon Now cart");
+    setCheckoutMessage(
+      `${reorderItems.length} items added from your previous order.`
+    );
+    addItemsToCart(reorderItems);
+    setOrdersOpen(false);
+    setCartOpen(true);
+
+    await sendNowFeedback({
+      userId: DEMO_USER_ID,
+      planId: order.plan?.planId,
+      action: "reordered_order",
+      selectedMode,
+      note: `Reordered ${reorderItems.length} items from order ${order.id}.`,
+    }).catch(() => null);
   }
 
   function openInstantCartWithPrompt(prompt?: string) {
@@ -479,7 +530,7 @@ export default function Home() {
         onOpenCart={() => setCartOpen(true)}
       />
 
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="mx-auto max-w-7xl px-4 py-5">
         <Hero
           healthStatus={healthStatus}
           onOpenInstantCart={openInstantCartWithPrompt}
@@ -542,6 +593,7 @@ export default function Home() {
         onClose={() => setCartOpen(false)}
         items={cartItems}
         onRemove={removeFromCart}
+        onClearCart={clearCart}
         onCheckout={handleCheckout}
         onShare={handleShareCart}
         isCheckingOut={isCheckingOut}
@@ -552,6 +604,7 @@ export default function Home() {
         open={ordersOpen}
         onClose={() => setOrdersOpen(false)}
         orders={orders}
+        onReorder={handleReorderOrder}
       />
     </main>
   );

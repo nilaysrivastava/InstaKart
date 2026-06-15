@@ -14,6 +14,7 @@ export function CartDrawer({
   onClose,
   items,
   onRemove,
+  onClearCart,
   onCheckout,
   onShare,
   isCheckingOut,
@@ -23,6 +24,7 @@ export function CartDrawer({
   onClose: () => void;
   items: NowCartItem[];
   onRemove: (productId: string) => void;
+  onClearCart: () => void;
   onCheckout: () => void;
   onShare: () => void;
   isCheckingOut: boolean;
@@ -110,6 +112,15 @@ export function CartDrawer({
               {formatPrice(total)}
             </p>
           </div>
+
+          {items.length ? (
+            <button
+              onClick={onClearCart}
+              className="mb-3 w-full rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-black text-red-700 hover:bg-red-100"
+            >
+              Remove All
+            </button>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <button

@@ -46,6 +46,9 @@ const buildProductEmbeddingText = (product) => {
     product.name,
     product.category,
     product.aisle,
+    product.budgetTier,
+    product.speedTier,
+    product.packSize,
     ...(product.tags || []),
     product.searchText,
   ]
@@ -108,6 +111,9 @@ async function seedProducts() {
       product.name,
       product.category,
       product.aisle,
+      product.budgetTier,
+      product.speedTier,
+      product.packSize,
       ...(product.tags || []),
     ]
       .filter(Boolean)

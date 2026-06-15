@@ -9,7 +9,7 @@ export function Hero({
 }) {
   return (
     <>
-      <section className="bg-white rounded-2xl my-2">
+      <section className="bg-white rounded-2xl mb-2">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <span className="text-lg font-black text-[#00a8a8]">amazon now</span>
 

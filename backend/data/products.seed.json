@@ -8,13 +8,7 @@
     "price": 155,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "odor",
-      "guests",
-      "pet mess",
-      "room",
-      "fresh"
-    ],
+    "tags": ["odor", "guests", "pet mess", "room", "fresh"],
     "imageHint": "air freshener"
   },
   {
@@ -26,12 +20,7 @@
     "price": 85,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "first aid",
-      "wound",
-      "hygiene",
-      "cleaning"
-    ],
+    "tags": ["first aid", "wound", "hygiene", "cleaning"],
     "imageHint": "antiseptic liquid"
   },
   {
@@ -43,13 +32,7 @@
     "price": 120,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "fruit",
-      "healthy",
-      "breakfast",
-      "snack",
-      "kids"
-    ],
+    "tags": ["fruit", "healthy", "breakfast", "snack", "kids"],
     "imageHint": "apples"
   },
   {
@@ -61,13 +44,31 @@
     "price": 220,
     "etaMinutes": 20,
     "available": true,
+    "tags": ["baby", "bottle", "feeding", "urgent"],
+    "imageHint": "baby bottle"
+  },
+  {
+    "id": "prod_baby_complete_kit_001",
+    "name": "Baby Care Complete Kit",
+    "category": "Baby Care",
+    "aisle": "Baby Care",
+    "price": 650,
+    "etaMinutes": 23,
     "tags": [
       "baby",
-      "bottle",
-      "feeding",
+      "care",
+      "diaper",
+      "wipes",
+      "premium",
+      "complete",
       "urgent"
     ],
-    "imageHint": "baby bottle"
+    "imageHint": "baby care complete kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_baby_food_001",
@@ -78,12 +79,7 @@
     "price": 250,
     "etaMinutes": 19,
     "available": true,
-    "tags": [
-      "baby",
-      "food",
-      "cereal",
-      "kids"
-    ],
+    "tags": ["baby", "food", "cereal", "kids"],
     "imageHint": "baby food"
   },
   {
@@ -95,12 +91,7 @@
     "price": 180,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "baby",
-      "lotion",
-      "care",
-      "skin"
-    ],
+    "tags": ["baby", "lotion", "care", "skin"],
     "imageHint": "baby lotion"
   },
   {
@@ -112,12 +103,7 @@
     "price": 130,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "baby",
-      "powder",
-      "care",
-      "skin"
-    ],
+    "tags": ["baby", "powder", "care", "skin"],
     "imageHint": "baby powder"
   },
   {
@@ -129,13 +115,31 @@
     "price": 180,
     "etaMinutes": 18,
     "available": true,
+    "tags": ["baby", "shampoo", "bath", "care"],
+    "imageHint": "baby shampoo"
+  },
+  {
+    "id": "prod_baby_urgent_value_001",
+    "name": "Baby Emergency Essentials Mini Kit",
+    "category": "Baby Care",
+    "aisle": "Baby Care",
+    "price": 220,
+    "etaMinutes": 10,
     "tags": [
       "baby",
-      "shampoo",
-      "bath",
-      "care"
+      "urgent",
+      "wipes",
+      "diaper",
+      "budget",
+      "fastest",
+      "forgotten essential"
     ],
-    "imageHint": "baby shampoo"
+    "imageHint": "baby essentials mini kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_baby_wipes_001",
@@ -146,12 +150,7 @@
     "price": 120,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "baby",
-      "wipes",
-      "diaper",
-      "forgotten essential"
-    ],
+    "tags": ["baby", "wipes", "diaper", "forgotten essential"],
     "imageHint": "baby wipes"
   },
   {
@@ -163,12 +162,7 @@
     "price": 90,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "birthday",
-      "party",
-      "decoration",
-      "kids"
-    ],
+    "tags": ["birthday", "party", "decoration", "kids"],
     "imageHint": "balloons"
   },
   {
@@ -180,13 +174,7 @@
     "price": 65,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "breakfast",
-      "fruit",
-      "healthy",
-      "fast",
-      "kids"
-    ],
+    "tags": ["breakfast", "fruit", "healthy", "fast", "kids"],
     "imageHint": "bananas"
   },
   {
@@ -198,12 +186,7 @@
     "price": 55,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "first aid",
-      "cut",
-      "minor injury",
-      "emergency"
-    ],
+    "tags": ["first aid", "cut", "minor injury", "emergency"],
     "imageHint": "bandage"
   },
   {
@@ -215,14 +198,38 @@
     "price": 90,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "battery",
-      "torch",
-      "remote",
-      "power cut",
-      "emergency"
-    ],
+    "tags": ["battery", "torch", "remote", "power cut", "emergency"],
     "imageHint": "batteries"
+  },
+  {
+    "id": "prod_battery_budget_001",
+    "name": "AA Batteries 2 Pack",
+    "category": "Emergency",
+    "aisle": "Emergency & Weather",
+    "price": 50,
+    "etaMinutes": 8,
+    "tags": ["battery", "torch", "remote", "power cut", "budget", "fastest"],
+    "imageHint": "battery 2 pack",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_battery_premium_001",
+    "name": "Long-Life AA Batteries 8 Pack",
+    "category": "Emergency",
+    "aisle": "Emergency & Weather",
+    "price": 220,
+    "etaMinutes": 18,
+    "tags": ["battery", "torch", "remote", "power cut", "premium", "complete"],
+    "imageHint": "long life batteries",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_birthday_banner_001",
@@ -233,13 +240,53 @@
     "price": 120,
     "etaMinutes": 16,
     "available": true,
+    "tags": ["birthday", "party", "decoration", "surprise"],
+    "imageHint": "birthday banner"
+  },
+  {
+    "id": "prod_birthday_budget_kit_001",
+    "name": "Mini Birthday Decoration Kit",
+    "category": "Birthday",
+    "aisle": "Party & Serving",
+    "price": 120,
+    "etaMinutes": 10,
     "tags": [
       "birthday",
       "party",
       "decoration",
+      "budget",
+      "value",
+      "fastest",
       "surprise"
     ],
-    "imageHint": "birthday banner"
+    "imageHint": "mini birthday kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_birthday_premium_kit_001",
+    "name": "Premium Birthday Decor Box",
+    "category": "Birthday",
+    "aisle": "Party & Serving",
+    "price": 480,
+    "etaMinutes": 23,
+    "tags": [
+      "birthday",
+      "party",
+      "decoration",
+      "premium",
+      "complete",
+      "surprise"
+    ],
+    "imageHint": "premium birthday box",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_body_wash_001",
@@ -250,11 +297,7 @@
     "price": 220,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "bath",
-      "grooming",
-      "personal care"
-    ],
+    "tags": ["bath", "grooming", "personal care"],
     "imageHint": "body wash"
   },
   {
@@ -266,13 +309,70 @@
     "price": 55,
     "etaMinutes": 9,
     "available": true,
+    "tags": ["breakfast", "bread", "daily essential", "fast"],
+    "imageHint": "bread loaf"
+  },
+  {
+    "id": "prod_bread_premium_001",
+    "name": "Multigrain Seeded Bread",
+    "category": "Bakery",
+    "aisle": "Breakfast & Dairy",
+    "price": 95,
+    "etaMinutes": 14,
+    "tags": ["bread", "breakfast", "premium", "healthy", "toast"],
+    "imageHint": "multigrain bread",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_breakfast_premium_combo_001",
+    "name": "Premium Breakfast Basket",
+    "category": "Breakfast",
+    "aisle": "Breakfast & Dairy",
+    "price": 420,
+    "etaMinutes": 22,
+    "tags": [
+      "breakfast",
+      "premium",
+      "complete",
+      "basket",
+      "fruit",
+      "bread",
+      "healthy"
+    ],
+    "imageHint": "breakfast basket",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_breakfast_value_combo_001",
+    "name": "Bread Butter Jam Value Combo",
+    "category": "Breakfast",
+    "aisle": "Breakfast & Dairy",
+    "price": 140,
+    "etaMinutes": 10,
     "tags": [
       "breakfast",
       "bread",
-      "daily essential",
-      "fast"
+      "butter",
+      "jam",
+      "value",
+      "combo",
+      "fastest",
+      "kids"
     ],
-    "imageHint": "bread loaf"
+    "imageHint": "breakfast combo",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_broom_001",
@@ -283,12 +383,7 @@
     "price": 140,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "floor",
-      "cleaning",
-      "home",
-      "dust"
-    ],
+    "tags": ["floor", "cleaning", "home", "dust"],
     "imageHint": "broom"
   },
   {
@@ -300,13 +395,23 @@
     "price": 62,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "breakfast",
-      "bread",
-      "toast",
-      "dairy"
-    ],
+    "tags": ["breakfast", "bread", "toast", "dairy"],
     "imageHint": "butter"
+  },
+  {
+    "id": "prod_cake_premium_001",
+    "name": "Designer Bento Cake",
+    "category": "Bakery",
+    "aisle": "Snacks & Party",
+    "price": 550,
+    "etaMinutes": 24,
+    "tags": ["cake", "birthday", "dessert", "premium", "surprise", "complete"],
+    "imageHint": "bento cake",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_cake_slice_001",
@@ -317,14 +422,23 @@
     "price": 120,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "cake",
-      "birthday",
-      "dessert",
-      "sweet",
-      "surprise"
-    ],
+    "tags": ["cake", "birthday", "dessert", "sweet", "surprise"],
     "imageHint": "cake slice"
+  },
+  {
+    "id": "prod_cake_small_001",
+    "name": "Cupcake Duo",
+    "category": "Bakery",
+    "aisle": "Snacks & Party",
+    "price": 90,
+    "etaMinutes": 11,
+    "tags": ["cake", "birthday", "dessert", "sweet", "budget", "fastest"],
+    "imageHint": "cupcakes",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_calculator_001",
@@ -335,12 +449,7 @@
     "price": 220,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "exam",
-      "study",
-      "office",
-      "math"
-    ],
+    "tags": ["exam", "study", "office", "math"],
     "imageHint": "calculator"
   },
   {
@@ -352,12 +461,7 @@
     "price": 70,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "power cut",
-      "light",
-      "emergency",
-      "night"
-    ],
+    "tags": ["power cut", "light", "emergency", "night"],
     "imageHint": "candles"
   },
   {
@@ -369,13 +473,7 @@
     "price": 45,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "birthday",
-      "cake",
-      "party",
-      "forgotten essential",
-      "surprise"
-    ],
+    "tags": ["birthday", "cake", "party", "forgotten essential", "surprise"],
     "imageHint": "birthday candles"
   },
   {
@@ -387,12 +485,7 @@
     "price": 75,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "kids",
-      "sweet",
-      "party",
-      "birthday"
-    ],
+    "tags": ["kids", "sweet", "party", "birthday"],
     "imageHint": "candy"
   },
   {
@@ -404,13 +497,23 @@
     "price": 160,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "breakfast",
-      "cereal",
-      "kids",
-      "quick meal"
-    ],
+    "tags": ["breakfast", "cereal", "kids", "quick meal"],
     "imageHint": "cereal box"
+  },
+  {
+    "id": "prod_charger_budget_001",
+    "name": "USB-C Cable + Adapter Basic Kit",
+    "category": "Electronics Accessories",
+    "aisle": "Work & Electronics",
+    "price": 299,
+    "etaMinutes": 14,
+    "tags": ["charger", "cable", "electronics", "work", "travel", "value"],
+    "imageHint": "charger basic kit",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_cheese_001",
@@ -421,13 +524,7 @@
     "price": 140,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "cooking",
-      "breakfast",
-      "pasta",
-      "sandwich",
-      "cheese"
-    ],
+    "tags": ["cooking", "breakfast", "pasta", "sandwich", "cheese"],
     "imageHint": "cheese"
   },
   {
@@ -439,13 +536,7 @@
     "price": 120,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "sweet",
-      "dessert",
-      "guests",
-      "birthday",
-      "delight"
-    ],
+    "tags": ["sweet", "dessert", "guests", "birthday", "delight"],
     "imageHint": "chocolate"
   },
   {
@@ -457,14 +548,45 @@
     "price": 135,
     "etaMinutes": 15,
     "available": true,
+    "tags": ["cleaning", "kitchen", "home", "quick cleanup", "spill"],
+    "imageHint": "cleaner bottle"
+  },
+  {
+    "id": "prod_cleanup_complete_kit_001",
+    "name": "Complete Home Cleanup Kit",
+    "category": "Cleaning",
+    "aisle": "Cleaning & Home",
+    "price": 390,
+    "etaMinutes": 21,
+    "tags": ["spill", "cleaning", "home", "premium", "complete", "disinfect"],
+    "imageHint": "complete cleanup kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_cleanup_value_kit_001",
+    "name": "Quick Spill Cleanup Value Kit",
+    "category": "Cleaning",
+    "aisle": "Cleaning & Home",
+    "price": 110,
+    "etaMinutes": 8,
     "tags": [
+      "spill",
       "cleaning",
       "kitchen",
-      "home",
-      "quick cleanup",
-      "spill"
+      "budget",
+      "fastest",
+      "quick cleanup"
     ],
-    "imageHint": "cleaner bottle"
+    "imageHint": "spill cleanup kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_clipboard_001",
@@ -475,12 +597,7 @@
     "price": 120,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "office",
-      "exam",
-      "writing",
-      "field work"
-    ],
+    "tags": ["office", "exam", "writing", "field work"],
     "imageHint": "clipboard"
   },
   {
@@ -492,12 +609,7 @@
     "price": 60,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "laundry",
-      "clothes",
-      "drying",
-      "home"
-    ],
+    "tags": ["laundry", "clothes", "drying", "home"],
     "imageHint": "cloth clips"
   },
   {
@@ -509,12 +621,7 @@
     "price": 80,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "laundry",
-      "clothes",
-      "drying",
-      "home"
-    ],
+    "tags": ["laundry", "clothes", "drying", "home"],
     "imageHint": "clothesline"
   },
   {
@@ -526,12 +633,7 @@
     "price": 130,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "hydration",
-      "healthy",
-      "summer",
-      "wellness"
-    ],
+    "tags": ["hydration", "healthy", "summer", "wellness"],
     "imageHint": "coconut water"
   },
   {
@@ -543,14 +645,45 @@
     "price": 220,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "coffee",
-      "work",
-      "study",
-      "breakfast",
-      "late night"
-    ],
+    "tags": ["coffee", "work", "study", "breakfast", "late night"],
     "imageHint": "coffee jar"
+  },
+  {
+    "id": "prod_cold_relief_premium_001",
+    "name": "Cold Recovery Complete Kit",
+    "category": "Wellness",
+    "aisle": "Health & Wellness",
+    "price": 430,
+    "etaMinutes": 23,
+    "tags": [
+      "cold",
+      "sore throat",
+      "wellness",
+      "comfort",
+      "premium",
+      "complete"
+    ],
+    "imageHint": "cold recovery kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_cold_relief_value_001",
+    "name": "Cold Comfort Value Kit",
+    "category": "Wellness",
+    "aisle": "Health & Wellness",
+    "price": 110,
+    "etaMinutes": 10,
+    "tags": ["cold", "sore throat", "wellness", "comfort", "budget", "fastest"],
+    "imageHint": "cold value kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_comb_001",
@@ -561,12 +694,7 @@
     "price": 35,
     "etaMinutes": 8,
     "available": true,
-    "tags": [
-      "interview",
-      "grooming",
-      "travel",
-      "hair"
-    ],
+    "tags": ["interview", "grooming", "travel", "hair"],
     "imageHint": "comb"
   },
   {
@@ -578,12 +706,7 @@
     "price": 90,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "cookies",
-      "snack",
-      "kids",
-      "guests"
-    ],
+    "tags": ["cookies", "snack", "kids", "guests"],
     "imageHint": "cookies"
   },
   {
@@ -595,12 +718,7 @@
     "price": 160,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "oil",
-      "cooking",
-      "kitchen",
-      "daily essential"
-    ],
+    "tags": ["oil", "cooking", "kitchen", "daily essential"],
     "imageHint": "oil bottle"
   },
   {
@@ -612,12 +730,7 @@
     "price": 55,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "first aid",
-      "wound",
-      "hygiene",
-      "health"
-    ],
+    "tags": ["first aid", "wound", "hygiene", "health"],
     "imageHint": "cotton roll"
   },
   {
@@ -629,12 +742,7 @@
     "price": 50,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "wellness",
-      "cold",
-      "sore throat",
-      "general comfort"
-    ],
+    "tags": ["wellness", "cold", "sore throat", "general comfort"],
     "imageHint": "cough drops"
   },
   {
@@ -646,12 +754,7 @@
     "price": 45,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "salad",
-      "fresh",
-      "healthy",
-      "dinner"
-    ],
+    "tags": ["salad", "fresh", "healthy", "dinner"],
     "imageHint": "cucumber"
   },
   {
@@ -663,13 +766,7 @@
     "price": 75,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "cups",
-      "party",
-      "guests",
-      "serving",
-      "forgotten essential"
-    ],
+    "tags": ["cups", "party", "guests", "serving", "forgotten essential"],
     "imageHint": "paper cups"
   },
   {
@@ -681,12 +778,7 @@
     "price": 199,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "interview",
-      "grooming",
-      "personal care",
-      "work"
-    ],
+    "tags": ["interview", "grooming", "personal care", "work"],
     "imageHint": "deodorant"
   },
   {
@@ -698,13 +790,38 @@
     "price": 210,
     "etaMinutes": 20,
     "available": true,
-    "tags": [
-      "laundry",
-      "clothes",
-      "cleaning",
-      "stain"
-    ],
+    "tags": ["laundry", "clothes", "cleaning", "stain"],
     "imageHint": "detergent"
+  },
+  {
+    "id": "prod_diaper_premium_001",
+    "name": "Premium Baby Diapers Jumbo Pack",
+    "category": "Baby Care",
+    "aisle": "Baby Care",
+    "price": 720,
+    "etaMinutes": 22,
+    "tags": ["baby", "diapers", "premium", "jumbo", "complete", "urgent"],
+    "imageHint": "premium diapers",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_diaper_small_001",
+    "name": "Baby Diapers Small Trial Pack",
+    "category": "Baby Care",
+    "aisle": "Baby Care",
+    "price": 120,
+    "etaMinutes": 9,
+    "tags": ["baby", "diapers", "urgent", "budget", "fastest", "trial"],
+    "imageHint": "diaper trial pack",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_diapers_001",
@@ -715,12 +832,68 @@
     "price": 360,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "baby",
-      "diapers",
-      "urgent"
-    ],
+    "tags": ["baby", "diapers", "urgent"],
     "imageHint": "diaper pack"
+  },
+  {
+    "id": "prod_dinner_premium_kit_001",
+    "name": "Premium Pasta Dinner Kit",
+    "category": "Kitchen",
+    "aisle": "Kitchen & Quick Meals",
+    "price": 520,
+    "etaMinutes": 22,
+    "tags": ["dinner", "pasta", "premium", "complete", "cooking", "meal"],
+    "imageHint": "premium pasta dinner kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_dinner_value_kit_001",
+    "name": "Quick Dinner Value Kit",
+    "category": "Quick Meals",
+    "aisle": "Kitchen & Quick Meals",
+    "price": 180,
+    "etaMinutes": 11,
+    "tags": ["dinner", "quick meal", "value", "combo", "fastest", "student"],
+    "imageHint": "quick dinner kit",
+    "budgetTier": "save",
+    "speedTier": "fast",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_dip_cheese_001",
+    "name": "Cheese Dip Bowl",
+    "category": "Snacks",
+    "aisle": "Snacks & Party",
+    "price": 140,
+    "etaMinutes": 16,
+    "tags": ["dip", "snacks", "party", "guests", "premium", "nachos"],
+    "imageHint": "cheese dip",
+    "budgetTier": "balanced",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_dip_salsa_001",
+    "name": "Salsa Dip Cup",
+    "category": "Snacks",
+    "aisle": "Snacks & Party",
+    "price": 70,
+    "etaMinutes": 11,
+    "tags": ["dip", "snacks", "party", "guests", "value", "nachos"],
+    "imageHint": "salsa dip",
+    "budgetTier": "save",
+    "speedTier": "fast",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_dishwash_liquid_001",
@@ -731,12 +904,7 @@
     "price": 120,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "kitchen",
-      "cleaning",
-      "dishes",
-      "home"
-    ],
+    "tags": ["kitchen", "cleaning", "dishes", "home"],
     "imageHint": "dishwash liquid"
   },
   {
@@ -748,14 +916,23 @@
     "price": 185,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "floor",
-      "cleaning",
-      "disinfect",
-      "pet mess",
-      "home"
-    ],
+    "tags": ["floor", "cleaning", "disinfect", "pet mess", "home"],
     "imageHint": "floor disinfectant"
+  },
+  {
+    "id": "prod_disinfectant_wipes_001",
+    "name": "Disinfectant Wipes Pack",
+    "category": "Cleaning",
+    "aisle": "Cleaning & Home",
+    "price": 120,
+    "etaMinutes": 9,
+    "tags": ["cleaning", "disinfect", "hygiene", "spill", "fastest", "home"],
+    "imageHint": "disinfectant wipes",
+    "budgetTier": "balanced",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_drink_cola_001",
@@ -766,13 +943,7 @@
     "price": 45,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "drinks",
-      "guests",
-      "party",
-      "cold beverage",
-      "fast"
-    ],
+    "tags": ["drinks", "guests", "party", "cold beverage", "fast"],
     "imageHint": "cola bottle"
   },
   {
@@ -784,14 +955,38 @@
     "price": 110,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "juice",
-      "breakfast",
-      "guests",
-      "kids",
-      "beverage"
-    ],
+    "tags": ["juice", "breakfast", "guests", "kids", "beverage"],
     "imageHint": "juice carton"
+  },
+  {
+    "id": "prod_drink_premium_juice_001",
+    "name": "Cold Pressed Juice Assortment",
+    "category": "Beverages",
+    "aisle": "Beverages",
+    "price": 260,
+    "etaMinutes": 20,
+    "tags": ["juice", "guests", "premium", "healthy", "complete", "party"],
+    "imageHint": "premium juice bottles",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_drink_value_pack_001",
+    "name": "Value Cola Mini Cans 4 Pack",
+    "category": "Beverages",
+    "aisle": "Beverages",
+    "price": 120,
+    "etaMinutes": 12,
+    "tags": ["drinks", "guests", "party", "value", "combo", "cold beverage"],
+    "imageHint": "cola cans",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_dustpan_001",
@@ -802,12 +997,7 @@
     "price": 80,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "floor",
-      "cleaning",
-      "home",
-      "dust"
-    ],
+    "tags": ["floor", "cleaning", "home", "dust"],
     "imageHint": "dustpan"
   },
   {
@@ -819,12 +1009,7 @@
     "price": 299,
     "etaMinutes": 19,
     "available": true,
-    "tags": [
-      "meeting",
-      "online class",
-      "work",
-      "travel"
-    ],
+    "tags": ["meeting", "online class", "work", "travel"],
     "imageHint": "earphones"
   },
   {
@@ -836,12 +1021,7 @@
     "price": 90,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "breakfast",
-      "protein",
-      "eggs",
-      "cooking"
-    ],
+    "tags": ["breakfast", "protein", "eggs", "cooking"],
     "imageHint": "egg carton"
   },
   {
@@ -853,12 +1033,7 @@
     "price": 80,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "hydration",
-      "sports",
-      "heat",
-      "wellness"
-    ],
+    "tags": ["hydration", "sports", "heat", "wellness"],
     "imageHint": "electrolyte drink"
   },
   {
@@ -870,14 +1045,31 @@
     "price": 115,
     "etaMinutes": 13,
     "available": true,
+    "tags": ["study", "work", "late night", "energy", "exam"],
+    "imageHint": "energy drink"
+  },
+  {
+    "id": "prod_energy_snack_combo_001",
+    "name": "Energy Snack Combo",
+    "category": "Snacks",
+    "aisle": "Snacks & Party",
+    "price": 140,
+    "etaMinutes": 11,
     "tags": [
       "study",
       "work",
       "late night",
       "energy",
-      "exam"
+      "snack",
+      "combo",
+      "value"
     ],
-    "imageHint": "energy drink"
+    "imageHint": "energy snack combo",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_envelope_001",
@@ -888,12 +1080,7 @@
     "price": 55,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "documents",
-      "office",
-      "interview",
-      "mail"
-    ],
+    "tags": ["documents", "office", "interview", "mail"],
     "imageHint": "envelopes"
   },
   {
@@ -905,12 +1092,7 @@
     "price": 399,
     "etaMinutes": 22,
     "available": true,
-    "tags": [
-      "power",
-      "charging",
-      "work",
-      "emergency"
-    ],
+    "tags": ["power", "charging", "work", "emergency"],
     "imageHint": "extension cord"
   },
   {
@@ -922,12 +1104,7 @@
     "price": 130,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "travel",
-      "sleep",
-      "flight",
-      "comfort"
-    ],
+    "tags": ["travel", "sleep", "flight", "comfort"],
     "imageHint": "eye mask"
   },
   {
@@ -939,12 +1116,7 @@
     "price": 190,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "laundry",
-      "clothes",
-      "fresh",
-      "cleaning"
-    ],
+    "tags": ["laundry", "clothes", "fresh", "cleaning"],
     "imageHint": "fabric softener"
   },
   {
@@ -956,12 +1128,7 @@
     "price": 90,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "grooming",
-      "travel",
-      "interview",
-      "freshen up"
-    ],
+    "tags": ["grooming", "travel", "interview", "freshen up"],
     "imageHint": "face wipes"
   },
   {
@@ -973,12 +1140,7 @@
     "price": 65,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "office",
-      "interview",
-      "documents",
-      "meeting"
-    ],
+    "tags": ["office", "interview", "documents", "meeting"],
     "imageHint": "file folder"
   },
   {
@@ -990,13 +1152,82 @@
     "price": 299,
     "etaMinutes": 20,
     "available": true,
+    "tags": ["first aid", "emergency", "injury", "travel"],
+    "imageHint": "first aid kit"
+  },
+  {
+    "id": "prod_first_aid_pocket_001",
+    "name": "Pocket First Aid Essentials",
+    "category": "First Aid",
+    "aisle": "Health & Wellness",
+    "price": 95,
+    "etaMinutes": 8,
+    "tags": ["first aid", "cut", "wound", "budget", "fastest", "emergency"],
+    "imageHint": "pocket first aid",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_first_aid_premium_001",
+    "name": "Family First Aid Box",
+    "category": "First Aid",
+    "aisle": "Health & Wellness",
+    "price": 520,
+    "etaMinutes": 22,
     "tags": [
       "first aid",
       "emergency",
       "injury",
-      "travel"
+      "premium",
+      "complete",
+      "family"
     ],
-    "imageHint": "first aid kit"
+    "imageHint": "family first aid box",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_formal_socks_001",
+    "name": "Formal Socks Pair",
+    "category": "Personal Care",
+    "aisle": "Personal Care",
+    "price": 120,
+    "etaMinutes": 13,
+    "tags": ["interview", "formal", "grooming", "clothes", "work"],
+    "imageHint": "formal socks",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_fruit_cup_001",
+    "name": "Cut Fruit Cup",
+    "category": "Fruits",
+    "aisle": "Fresh",
+    "price": 90,
+    "etaMinutes": 9,
+    "tags": [
+      "fruit",
+      "breakfast",
+      "healthy",
+      "fastest",
+      "ready-to-eat",
+      "snack"
+    ],
+    "imageHint": "fruit cup",
+    "budgetTier": "balanced",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_garbage_bags_001",
@@ -1007,14 +1238,23 @@
     "price": 95,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "cleaning",
-      "garbage",
-      "home",
-      "waste",
-      "forgotten essential"
-    ],
+    "tags": ["cleaning", "garbage", "home", "waste", "forgotten essential"],
     "imageHint": "garbage bags"
+  },
+  {
+    "id": "prod_gift_chocolates_premium_001",
+    "name": "Premium Chocolate Gift Box",
+    "category": "Sweets",
+    "aisle": "Snacks & Party",
+    "price": 399,
+    "etaMinutes": 22,
+    "tags": ["chocolate", "gift", "birthday", "premium", "sweet", "surprise"],
+    "imageHint": "chocolate gift box",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_gift_wrap_001",
@@ -1025,12 +1265,7 @@
     "price": 35,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "gift",
-      "birthday",
-      "surprise",
-      "wrapping"
-    ],
+    "tags": ["gift", "birthday", "surprise", "wrapping"],
     "imageHint": "gift wrap"
   },
   {
@@ -1042,12 +1277,7 @@
     "price": 90,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "cleaning",
-      "hygiene",
-      "pet mess",
-      "bathroom"
-    ],
+    "tags": ["cleaning", "hygiene", "pet mess", "bathroom"],
     "imageHint": "cleaning gloves"
   },
   {
@@ -1059,13 +1289,23 @@
     "price": 85,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "energy",
-      "sports",
-      "hydration",
-      "summer"
-    ],
+    "tags": ["energy", "sports", "hydration", "summer"],
     "imageHint": "glucose powder"
+  },
+  {
+    "id": "prod_gourmet_sauce_001",
+    "name": "Gourmet Pasta Sauce",
+    "category": "Kitchen",
+    "aisle": "Kitchen & Quick Meals",
+    "price": 240,
+    "etaMinutes": 18,
+    "tags": ["cooking", "dinner", "pasta", "sauce", "premium", "gourmet"],
+    "imageHint": "gourmet sauce",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_grapes_001",
@@ -1076,12 +1316,7 @@
     "price": 130,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "fruit",
-      "healthy",
-      "guests",
-      "snack"
-    ],
+    "tags": ["fruit", "healthy", "guests", "snack"],
     "imageHint": "grapes"
   },
   {
@@ -1093,12 +1328,7 @@
     "price": 180,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "tea",
-      "wellness",
-      "healthy",
-      "morning"
-    ],
+    "tags": ["tea", "wellness", "healthy", "morning"],
     "imageHint": "green tea"
   },
   {
@@ -1110,12 +1340,7 @@
     "price": 60,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "birthday",
-      "gift",
-      "card",
-      "surprise"
-    ],
+    "tags": ["birthday", "gift", "card", "surprise"],
     "imageHint": "greeting card"
   },
   {
@@ -1127,12 +1352,7 @@
     "price": 160,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "sweet",
-      "dessert",
-      "guests",
-      "festival"
-    ],
+    "tags": ["sweet", "dessert", "guests", "festival"],
     "imageHint": "gulab jamun"
   },
   {
@@ -1144,12 +1364,7 @@
     "price": 170,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "interview",
-      "grooming",
-      "meeting",
-      "hair"
-    ],
+    "tags": ["interview", "grooming", "meeting", "hair"],
     "imageHint": "hair gel"
   },
   {
@@ -1161,12 +1376,7 @@
     "price": 90,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "travel",
-      "gym",
-      "personal care",
-      "packing"
-    ],
+    "tags": ["travel", "gym", "personal care", "packing"],
     "imageHint": "hand towel"
   },
   {
@@ -1178,12 +1388,7 @@
     "price": 85,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "study",
-      "exam",
-      "notes",
-      "office"
-    ],
+    "tags": ["study", "exam", "notes", "office"],
     "imageHint": "highlighters"
   },
   {
@@ -1195,12 +1400,7 @@
     "price": 190,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "sweet",
-      "kids",
-      "breakfast",
-      "comfort"
-    ],
+    "tags": ["sweet", "kids", "breakfast", "comfort"],
     "imageHint": "hot chocolate"
   },
   {
@@ -1212,12 +1412,7 @@
     "price": 250,
     "etaMinutes": 20,
     "available": true,
-    "tags": [
-      "pain relief",
-      "comfort",
-      "period",
-      "wellness"
-    ],
+    "tags": ["pain relief", "comfort", "period", "wellness"],
     "imageHint": "hot water bag"
   },
   {
@@ -1229,12 +1424,7 @@
     "price": 180,
     "etaMinutes": 20,
     "available": true,
-    "tags": [
-      "dessert",
-      "guests",
-      "sweet",
-      "party"
-    ],
+    "tags": ["dessert", "guests", "sweet", "party"],
     "imageHint": "ice cream cups"
   },
   {
@@ -1246,12 +1436,7 @@
     "price": 65,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "drink",
-      "guests",
-      "refreshing",
-      "party"
-    ],
+    "tags": ["drink", "guests", "refreshing", "party"],
     "imageHint": "iced tea"
   },
   {
@@ -1263,14 +1448,45 @@
     "price": 60,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "quick meal",
-      "late night",
-      "student",
-      "hungry",
-      "fast"
-    ],
+    "tags": ["quick meal", "late night", "student", "hungry", "fast"],
     "imageHint": "instant noodles"
+  },
+  {
+    "id": "prod_interview_budget_grooming_001",
+    "name": "Pocket Grooming Kit",
+    "category": "Personal Care",
+    "aisle": "Personal Care",
+    "price": 120,
+    "etaMinutes": 9,
+    "tags": ["interview", "grooming", "meeting", "budget", "fastest", "fresh"],
+    "imageHint": "pocket grooming kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_interview_premium_grooming_001",
+    "name": "Premium Grooming Set",
+    "category": "Personal Care",
+    "aisle": "Personal Care",
+    "price": 450,
+    "etaMinutes": 20,
+    "tags": [
+      "interview",
+      "grooming",
+      "meeting",
+      "premium",
+      "complete",
+      "presentation"
+    ],
+    "imageHint": "premium grooming set",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_jam_001",
@@ -1281,12 +1497,7 @@
     "price": 95,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "breakfast",
-      "bread",
-      "kids",
-      "sweet"
-    ],
+    "tags": ["breakfast", "bread", "kids", "sweet"],
     "imageHint": "jam jar"
   },
   {
@@ -1298,12 +1509,7 @@
     "price": 199,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "laptop",
-      "cleaning",
-      "desk",
-      "work"
-    ],
+    "tags": ["laptop", "cleaning", "desk", "work"],
     "imageHint": "screen cleaner"
   },
   {
@@ -1315,12 +1521,7 @@
     "price": 70,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "drink",
-      "breakfast",
-      "summer",
-      "dairy"
-    ],
+    "tags": ["drink", "breakfast", "summer", "dairy"],
     "imageHint": "lassi bottle"
   },
   {
@@ -1332,13 +1533,7 @@
     "price": 35,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "lemon",
-      "drink",
-      "cleaning",
-      "cooking",
-      "sore throat"
-    ],
+    "tags": ["lemon", "drink", "cleaning", "cooking", "sore throat"],
     "imageHint": "lemons"
   },
   {
@@ -1350,12 +1545,7 @@
     "price": 130,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "pet",
-      "clothes",
-      "hair",
-      "cleaning"
-    ],
+    "tags": ["pet", "clothes", "hair", "cleaning"],
     "imageHint": "lint roller"
   },
   {
@@ -1367,12 +1557,7 @@
     "price": 75,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "personal care",
-      "winter",
-      "travel",
-      "comfort"
-    ],
+    "tags": ["personal care", "winter", "travel", "comfort"],
     "imageHint": "lip balm"
   },
   {
@@ -1384,12 +1569,7 @@
     "price": 80,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "travel",
-      "packing",
-      "bag",
-      "organize"
-    ],
+    "tags": ["travel", "packing", "bag", "organize"],
     "imageHint": "luggage tag"
   },
   {
@@ -1401,12 +1581,7 @@
     "price": 145,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "snack",
-      "healthy",
-      "guests",
-      "movie"
-    ],
+    "tags": ["snack", "healthy", "guests", "movie"],
     "imageHint": "makhana"
   },
   {
@@ -1418,12 +1593,7 @@
     "price": 45,
     "etaMinutes": 9,
     "available": true,
-    "tags": [
-      "office",
-      "meeting",
-      "presentation",
-      "study"
-    ],
+    "tags": ["office", "meeting", "presentation", "study"],
     "imageHint": "marker"
   },
   {
@@ -1435,12 +1605,7 @@
     "price": 120,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "cooking",
-      "spices",
-      "dinner",
-      "kitchen"
-    ],
+    "tags": ["cooking", "spices", "dinner", "kitchen"],
     "imageHint": "masala box"
   },
   {
@@ -1452,12 +1617,7 @@
     "price": 80,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "mask",
-      "hygiene",
-      "travel",
-      "health"
-    ],
+    "tags": ["mask", "hygiene", "travel", "health"],
     "imageHint": "face masks"
   },
   {
@@ -1469,12 +1629,7 @@
     "price": 20,
     "etaMinutes": 8,
     "available": true,
-    "tags": [
-      "power cut",
-      "candle",
-      "emergency",
-      "kitchen"
-    ],
+    "tags": ["power cut", "candle", "emergency", "kitchen"],
     "imageHint": "matchbox"
   },
   {
@@ -1486,13 +1641,7 @@
     "price": 120,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "cleaning",
-      "spill",
-      "desk",
-      "kitchen",
-      "pet mess"
-    ],
+    "tags": ["cleaning", "spill", "desk", "kitchen", "pet mess"],
     "imageHint": "microfiber cloth"
   },
   {
@@ -1504,14 +1653,45 @@
     "price": 70,
     "etaMinutes": 8,
     "available": true,
-    "tags": [
-      "breakfast",
-      "daily essential",
-      "milk",
-      "fast",
-      "tea"
-    ],
+    "tags": ["breakfast", "daily essential", "milk", "fast", "tea"],
     "imageHint": "milk bottle"
+  },
+  {
+    "id": "prod_milk_organic_001",
+    "name": "Organic Milk 1L",
+    "category": "Dairy",
+    "aisle": "Breakfast & Dairy",
+    "price": 110,
+    "etaMinutes": 16,
+    "tags": ["milk", "breakfast", "premium", "organic", "healthy"],
+    "imageHint": "organic milk",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_milk_small_001",
+    "name": "Fresh Milk 500ml",
+    "category": "Dairy",
+    "aisle": "Breakfast & Dairy",
+    "price": 38,
+    "etaMinutes": 7,
+    "tags": [
+      "milk",
+      "breakfast",
+      "tea",
+      "budget",
+      "fastest",
+      "daily essential"
+    ],
+    "imageHint": "small milk pouch",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "mini",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_mini_lock_001",
@@ -1522,12 +1702,7 @@
     "price": 150,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "travel",
-      "security",
-      "bag",
-      "packing"
-    ],
+    "tags": ["travel", "security", "bag", "packing"],
     "imageHint": "luggage lock"
   },
   {
@@ -1539,13 +1714,7 @@
     "price": 45,
     "etaMinutes": 8,
     "available": true,
-    "tags": [
-      "interview",
-      "meeting",
-      "guests",
-      "fresh",
-      "forgotten essential"
-    ],
+    "tags": ["interview", "meeting", "guests", "fresh", "forgotten essential"],
     "imageHint": "mints"
   },
   {
@@ -1557,12 +1726,7 @@
     "price": 130,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "skin",
-      "personal care",
-      "travel",
-      "winter"
-    ],
+    "tags": ["skin", "personal care", "travel", "winter"],
     "imageHint": "moisturizer"
   },
   {
@@ -1574,13 +1738,7 @@
     "price": 145,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "floor",
-      "cleaning",
-      "pet mess",
-      "spill",
-      "kitchen"
-    ],
+    "tags": ["floor", "cleaning", "pet mess", "spill", "kitchen"],
     "imageHint": "floor wipes"
   },
   {
@@ -1592,12 +1750,7 @@
     "price": 160,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "mosquito",
-      "night",
-      "power cut",
-      "comfort"
-    ],
+    "tags": ["mosquito", "night", "power cut", "comfort"],
     "imageHint": "mosquito repellent"
   },
   {
@@ -1609,12 +1762,7 @@
     "price": 599,
     "etaMinutes": 24,
     "available": true,
-    "tags": [
-      "work",
-      "laptop",
-      "meeting",
-      "electronics"
-    ],
+    "tags": ["work", "laptop", "meeting", "electronics"],
     "imageHint": "wireless mouse"
   },
   {
@@ -1626,13 +1774,7 @@
     "price": 160,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "dessert",
-      "birthday",
-      "guests",
-      "sweet",
-      "snack"
-    ],
+    "tags": ["dessert", "birthday", "guests", "sweet", "snack"],
     "imageHint": "muffins"
   },
   {
@@ -1644,12 +1786,7 @@
     "price": 220,
     "etaMinutes": 20,
     "available": true,
-    "tags": [
-      "travel",
-      "sleep",
-      "flight",
-      "comfort"
-    ],
+    "tags": ["travel", "sleep", "flight", "comfort"],
     "imageHint": "neck pillow"
   },
   {
@@ -1661,13 +1798,7 @@
     "price": 80,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "office",
-      "interview",
-      "meeting",
-      "notes",
-      "study"
-    ],
+    "tags": ["office", "interview", "meeting", "notes", "study"],
     "imageHint": "notebook"
   },
   {
@@ -1679,12 +1810,7 @@
     "price": 160,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "breakfast",
-      "healthy",
-      "quick meal",
-      "morning"
-    ],
+    "tags": ["breakfast", "healthy", "quick meal", "morning"],
     "imageHint": "oats"
   },
   {
@@ -1696,12 +1822,7 @@
     "price": 55,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "vegetable",
-      "cooking",
-      "kitchen",
-      "daily essential"
-    ],
+    "tags": ["vegetable", "cooking", "kitchen", "daily essential"],
     "imageHint": "onions"
   },
   {
@@ -1713,12 +1834,7 @@
     "price": 110,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "fruit",
-      "vitamin",
-      "healthy",
-      "breakfast"
-    ],
+    "tags": ["fruit", "vitamin", "healthy", "breakfast"],
     "imageHint": "oranges"
   },
   {
@@ -1730,12 +1846,7 @@
     "price": 40,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "hydration",
-      "wellness",
-      "heat",
-      "general comfort"
-    ],
+    "tags": ["hydration", "wellness", "heat", "general comfort"],
     "imageHint": "ORS sachet"
   },
   {
@@ -1747,12 +1858,7 @@
     "price": 110,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "dinner",
-      "protein",
-      "cooking",
-      "vegetarian"
-    ],
+    "tags": ["dinner", "protein", "cooking", "vegetarian"],
     "imageHint": "paneer"
   },
   {
@@ -1764,12 +1870,7 @@
     "price": 110,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "spill",
-      "kitchen",
-      "cleaning",
-      "towels"
-    ],
+    "tags": ["spill", "kitchen", "cleaning", "towels"],
     "imageHint": "paper towels"
   },
   {
@@ -1781,13 +1882,55 @@
     "price": 140,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "birthday",
-      "party",
-      "surprise",
-      "celebration"
-    ],
+    "tags": ["birthday", "party", "surprise", "celebration"],
     "imageHint": "party poppers"
+  },
+  {
+    "id": "prod_party_serving_budget_001",
+    "name": "Eco Serving Kit for 6",
+    "category": "Party Essentials",
+    "aisle": "Party & Serving",
+    "price": 80,
+    "etaMinutes": 9,
+    "tags": [
+      "serving",
+      "guests",
+      "party",
+      "cups",
+      "plates",
+      "spoons",
+      "budget",
+      "fastest"
+    ],
+    "imageHint": "party serving kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_party_serving_premium_001",
+    "name": "Premium Party Serving Kit for 12",
+    "category": "Party Essentials",
+    "aisle": "Party & Serving",
+    "price": 260,
+    "etaMinutes": 18,
+    "tags": [
+      "serving",
+      "guests",
+      "party",
+      "premium",
+      "complete",
+      "plates",
+      "cups"
+    ],
+    "imageHint": "premium serving kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_pasta_001",
@@ -1798,12 +1941,7 @@
     "price": 120,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "cooking",
-      "dinner",
-      "pasta",
-      "meal"
-    ],
+    "tags": ["cooking", "dinner", "pasta", "meal"],
     "imageHint": "pasta"
   },
   {
@@ -1815,12 +1953,7 @@
     "price": 150,
     "etaMinutes": 17,
     "available": true,
-    "tags": [
-      "cooking",
-      "dinner",
-      "pasta",
-      "sauce"
-    ],
+    "tags": ["cooking", "dinner", "pasta", "sauce"],
     "imageHint": "pasta sauce"
   },
   {
@@ -1832,12 +1965,7 @@
     "price": 240,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "breakfast",
-      "protein",
-      "bread",
-      "healthy"
-    ],
+    "tags": ["breakfast", "protein", "bread", "healthy"],
     "imageHint": "peanut butter"
   },
   {
@@ -1849,12 +1977,7 @@
     "price": 70,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "snack",
-      "party",
-      "guests",
-      "protein"
-    ],
+    "tags": ["snack", "party", "guests", "protein"],
     "imageHint": "peanuts"
   },
   {
@@ -1866,13 +1989,7 @@
     "price": 50,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "office",
-      "interview",
-      "meeting",
-      "study",
-      "forgotten essential"
-    ],
+    "tags": ["office", "interview", "meeting", "study", "forgotten essential"],
     "imageHint": "pens"
   },
   {
@@ -1884,14 +2001,47 @@
     "price": 180,
     "etaMinutes": 18,
     "available": true,
+    "tags": ["pet", "dog", "cat", "food", "bowl"],
+    "imageHint": "pet bowl"
+  },
+  {
+    "id": "prod_pet_cleanup_budget_001",
+    "name": "Pet Cleanup Value Kit",
+    "category": "Pet Care",
+    "aisle": "Pet Care",
+    "price": 150,
+    "etaMinutes": 10,
+    "tags": ["pet", "dog", "cat", "mess", "cleaning", "budget", "fastest"],
+    "imageHint": "pet cleanup kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_pet_cleanup_premium_001",
+    "name": "Deep Pet Cleanup Kit",
+    "category": "Pet Care",
+    "aisle": "Pet Care",
+    "price": 420,
+    "etaMinutes": 20,
     "tags": [
       "pet",
       "dog",
       "cat",
-      "food",
-      "bowl"
+      "mess",
+      "cleaning",
+      "premium",
+      "complete",
+      "odor"
     ],
-    "imageHint": "pet bowl"
+    "imageHint": "deep pet cleanup kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_pet_food_001",
@@ -1902,14 +2052,38 @@
     "price": 240,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "pet",
-      "dog",
-      "cat",
-      "food",
-      "urgent"
-    ],
+    "tags": ["pet", "dog", "cat", "food", "urgent"],
     "imageHint": "pet food"
+  },
+  {
+    "id": "prod_pet_food_premium_001",
+    "name": "Premium Pet Meal Pouch",
+    "category": "Pet Care",
+    "aisle": "Pet Care",
+    "price": 280,
+    "etaMinutes": 18,
+    "tags": ["pet", "dog", "cat", "food", "premium", "complete", "treats"],
+    "imageHint": "premium pet meal",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_pet_food_trial_001",
+    "name": "Pet Food Trial Pack",
+    "category": "Pet Care",
+    "aisle": "Pet Care",
+    "price": 90,
+    "etaMinutes": 9,
+    "tags": ["pet", "dog", "cat", "food", "budget", "fastest", "urgent"],
+    "imageHint": "pet food trial pack",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_pet_litter_001",
@@ -1920,13 +2094,7 @@
     "price": 280,
     "etaMinutes": 22,
     "available": true,
-    "tags": [
-      "cat",
-      "pet",
-      "litter",
-      "odor",
-      "mess"
-    ],
+    "tags": ["cat", "pet", "litter", "odor", "mess"],
     "imageHint": "cat litter"
   },
   {
@@ -1938,12 +2106,7 @@
     "price": 220,
     "etaMinutes": 19,
     "available": true,
-    "tags": [
-      "pet",
-      "odor",
-      "cleaning",
-      "mess"
-    ],
+    "tags": ["pet", "odor", "cleaning", "mess"],
     "imageHint": "pet odour spray"
   },
   {
@@ -1955,13 +2118,7 @@
     "price": 260,
     "etaMinutes": 21,
     "available": true,
-    "tags": [
-      "pet",
-      "dog",
-      "cat",
-      "bath",
-      "cleaning"
-    ],
+    "tags": ["pet", "dog", "cat", "bath", "cleaning"],
     "imageHint": "pet shampoo"
   },
   {
@@ -1973,13 +2130,7 @@
     "price": 150,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "pet",
-      "dog",
-      "cat",
-      "treats",
-      "food"
-    ],
+    "tags": ["pet", "dog", "cat", "treats", "food"],
     "imageHint": "pet treats"
   },
   {
@@ -1991,13 +2142,7 @@
     "price": 160,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "pet",
-      "dog",
-      "cat",
-      "cleaning",
-      "mess"
-    ],
+    "tags": ["pet", "dog", "cat", "cleaning", "mess"],
     "imageHint": "pet wipes"
   },
   {
@@ -2009,13 +2154,7 @@
     "price": 499,
     "etaMinutes": 21,
     "available": true,
-    "tags": [
-      "charger",
-      "work",
-      "meeting",
-      "electronics",
-      "urgent"
-    ],
+    "tags": ["charger", "work", "meeting", "electronics", "urgent"],
     "imageHint": "phone charger"
   },
   {
@@ -2027,12 +2166,7 @@
     "price": 120,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "rain",
-      "leak",
-      "cover",
-      "temporary repair"
-    ],
+    "tags": ["rain", "leak", "cover", "temporary repair"],
     "imageHint": "plastic sheet"
   },
   {
@@ -2044,13 +2178,7 @@
     "price": 95,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "plates",
-      "party",
-      "guests",
-      "serving",
-      "birthday"
-    ],
+    "tags": ["plates", "party", "guests", "serving", "birthday"],
     "imageHint": "paper plates"
   },
   {
@@ -2062,12 +2190,7 @@
     "price": 50,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "vegetable",
-      "cooking",
-      "kitchen",
-      "daily essential"
-    ],
+    "tags": ["vegetable", "cooking", "kitchen", "daily essential"],
     "imageHint": "potatoes"
   },
   {
@@ -2079,14 +2202,98 @@
     "price": 999,
     "etaMinutes": 24,
     "available": true,
+    "tags": ["power cut", "travel", "phone", "emergency", "charging"],
+    "imageHint": "power bank"
+  },
+  {
+    "id": "prod_power_bank_mini_001",
+    "name": "Mini Emergency Power Bank",
+    "category": "Electronics Accessories",
+    "aisle": "Emergency & Weather",
+    "price": 499,
+    "etaMinutes": 16,
+    "tags": ["power", "travel", "phone", "emergency", "charging", "fastest"],
+    "imageHint": "mini power bank",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_powercut_premium_kit_001",
+    "name": "Rechargeable Emergency Light Kit",
+    "category": "Emergency",
+    "aisle": "Emergency & Weather",
+    "price": 699,
+    "etaMinutes": 23,
     "tags": [
       "power cut",
-      "travel",
-      "phone",
+      "light",
       "emergency",
-      "charging"
+      "premium",
+      "complete",
+      "rechargeable"
     ],
-    "imageHint": "power bank"
+    "imageHint": "emergency light kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_powercut_value_kit_001",
+    "name": "Power Cut Value Kit",
+    "category": "Emergency",
+    "aisle": "Emergency & Weather",
+    "price": 180,
+    "etaMinutes": 9,
+    "tags": [
+      "power cut",
+      "light",
+      "emergency",
+      "budget",
+      "fastest",
+      "candle",
+      "battery"
+    ],
+    "imageHint": "power cut value kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_premium_floor_cleaner_001",
+    "name": "Premium Fragrant Floor Cleaner",
+    "category": "Cleaning",
+    "aisle": "Cleaning & Home",
+    "price": 260,
+    "etaMinutes": 18,
+    "tags": ["floor", "cleaning", "premium", "fragrant", "home", "complete"],
+    "imageHint": "premium floor cleaner",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_premium_stationery_001",
+    "name": "Premium Stationery Set",
+    "category": "Office",
+    "aisle": "Work & Electronics",
+    "price": 280,
+    "etaMinutes": 18,
+    "tags": ["study", "office", "premium", "complete", "stationery", "exam"],
+    "imageHint": "premium stationery",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_protein_bar_001",
@@ -2097,13 +2304,38 @@
     "price": 95,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "fitness",
-      "snack",
-      "protein",
-      "travel"
-    ],
+    "tags": ["fitness", "snack", "protein", "travel"],
     "imageHint": "protein bar"
+  },
+  {
+    "id": "prod_rain_premium_kit_001",
+    "name": "Rain Protection Complete Kit",
+    "category": "Rain Essentials",
+    "aisle": "Emergency & Weather",
+    "price": 590,
+    "etaMinutes": 22,
+    "tags": ["rain", "weather", "umbrella", "premium", "complete", "urgent"],
+    "imageHint": "rain complete kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_rain_value_kit_001",
+    "name": "Rain Emergency Value Kit",
+    "category": "Rain Essentials",
+    "aisle": "Emergency & Weather",
+    "price": 160,
+    "etaMinutes": 9,
+    "tags": ["rain", "weather", "umbrella", "budget", "fastest", "urgent"],
+    "imageHint": "rain value kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_raincoat_001",
@@ -2114,12 +2346,7 @@
     "price": 120,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "rain",
-      "travel",
-      "weather",
-      "urgent"
-    ],
+    "tags": ["rain", "travel", "weather", "urgent"],
     "imageHint": "rain poncho"
   },
   {
@@ -2131,12 +2358,7 @@
     "price": 95,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "grooming",
-      "interview",
-      "travel",
-      "personal care"
-    ],
+    "tags": ["grooming", "interview", "travel", "personal care"],
     "imageHint": "razor"
   },
   {
@@ -2148,13 +2370,30 @@
     "price": 110,
     "etaMinutes": 15,
     "available": true,
+    "tags": ["dinner", "quick meal", "student", "home"],
+    "imageHint": "ready dal"
+  },
+  {
+    "id": "prod_ready_meal_combo_001",
+    "name": "Ready Meal Combo Bowl",
+    "category": "Quick Meals",
+    "aisle": "Kitchen & Quick Meals",
+    "price": 170,
+    "etaMinutes": 10,
     "tags": [
       "dinner",
       "quick meal",
-      "student",
-      "home"
+      "combo",
+      "ready-to-eat",
+      "fastest",
+      "student"
     ],
-    "imageHint": "ready dal"
+    "imageHint": "ready meal combo",
+    "budgetTier": "balanced",
+    "speedTier": "express",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_ready_poha_001",
@@ -2165,12 +2404,7 @@
     "price": 75,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "breakfast",
-      "quick meal",
-      "student",
-      "morning"
-    ],
+    "tags": ["breakfast", "quick meal", "student", "morning"],
     "imageHint": "poha mix"
   },
   {
@@ -2182,12 +2416,7 @@
     "price": 120,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "dinner",
-      "quick meal",
-      "student",
-      "travel"
-    ],
+    "tags": ["dinner", "quick meal", "student", "travel"],
     "imageHint": "rice bowl"
   },
   {
@@ -2199,12 +2428,7 @@
     "price": 80,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "breakfast",
-      "quick meal",
-      "student",
-      "morning"
-    ],
+    "tags": ["breakfast", "quick meal", "student", "morning"],
     "imageHint": "upma mix"
   },
   {
@@ -2216,12 +2440,7 @@
     "price": 45,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "gift",
-      "birthday",
-      "wrapping",
-      "surprise"
-    ],
+    "tags": ["gift", "birthday", "wrapping", "surprise"],
     "imageHint": "gift ribbon"
   },
   {
@@ -2233,12 +2452,7 @@
     "price": 160,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "rice",
-      "cooking",
-      "daily essential",
-      "dinner"
-    ],
+    "tags": ["rice", "cooking", "daily essential", "dinner"],
     "imageHint": "rice bag"
   },
   {
@@ -2250,12 +2464,7 @@
     "price": 90,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "packing",
-      "repair",
-      "travel",
-      "emergency"
-    ],
+    "tags": ["packing", "repair", "travel", "emergency"],
     "imageHint": "nylon rope"
   },
   {
@@ -2267,13 +2476,7 @@
     "price": 35,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "travel",
-      "clothes",
-      "emergency",
-      "repair",
-      "packing"
-    ],
+    "tags": ["travel", "clothes", "emergency", "repair", "packing"],
     "imageHint": "safety pins"
   },
   {
@@ -2285,12 +2488,7 @@
     "price": 28,
     "etaMinutes": 9,
     "available": true,
-    "tags": [
-      "salt",
-      "cooking",
-      "daily essential",
-      "kitchen"
-    ],
+    "tags": ["salt", "cooking", "daily essential", "kitchen"],
     "imageHint": "salt packet"
   },
   {
@@ -2302,12 +2500,7 @@
     "price": 95,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "period",
-      "personal care",
-      "urgent",
-      "hygiene"
-    ],
+    "tags": ["period", "personal care", "urgent", "hygiene"],
     "imageHint": "sanitary pads"
   },
   {
@@ -2319,13 +2512,7 @@
     "price": 60,
     "etaMinutes": 9,
     "available": true,
-    "tags": [
-      "hygiene",
-      "travel",
-      "guests",
-      "health",
-      "fast"
-    ],
+    "tags": ["hygiene", "travel", "guests", "health", "fast"],
     "imageHint": "sanitizer"
   },
   {
@@ -2337,12 +2524,7 @@
     "price": 75,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "project",
-      "packing",
-      "gift",
-      "office"
-    ],
+    "tags": ["project", "packing", "gift", "office"],
     "imageHint": "scissors"
   },
   {
@@ -2354,12 +2536,7 @@
     "price": 60,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "kitchen",
-      "cleaning",
-      "dishes",
-      "scrub"
-    ],
+    "tags": ["kitchen", "cleaning", "dishes", "scrub"],
     "imageHint": "scrub pads"
   },
   {
@@ -2371,12 +2548,7 @@
     "price": 110,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "repair",
-      "packing",
-      "leak",
-      "temporary fix"
-    ],
+    "tags": ["repair", "packing", "leak", "temporary fix"],
     "imageHint": "sealing tape"
   },
   {
@@ -2388,12 +2560,7 @@
     "price": 180,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "fitness",
-      "gym",
-      "protein",
-      "bottle"
-    ],
+    "tags": ["fitness", "gym", "protein", "bottle"],
     "imageHint": "shaker bottle"
   },
   {
@@ -2405,13 +2572,23 @@
     "price": 90,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "hair",
-      "bath",
-      "personal care",
-      "travel"
-    ],
+    "tags": ["hair", "bath", "personal care", "travel"],
     "imageHint": "shampoo sachets"
+  },
+  {
+    "id": "prod_shirt_freshener_001",
+    "name": "Fabric Freshener Mini Spray",
+    "category": "Personal Care",
+    "aisle": "Personal Care",
+    "price": 85,
+    "etaMinutes": 8,
+    "tags": ["interview", "grooming", "fresh", "clothes", "fastest", "odor"],
+    "imageHint": "fabric freshener",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "mini",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_shoe_polish_001",
@@ -2422,13 +2599,30 @@
     "price": 75,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "interview",
-      "grooming",
-      "shoes",
-      "formal"
-    ],
+    "tags": ["interview", "grooming", "shoes", "formal"],
     "imageHint": "shoe polish"
+  },
+  {
+    "id": "prod_smoothie_001",
+    "name": "Ready Breakfast Smoothie",
+    "category": "Beverages",
+    "aisle": "Breakfast & Dairy",
+    "price": 160,
+    "etaMinutes": 13,
+    "tags": [
+      "breakfast",
+      "drink",
+      "smoothie",
+      "healthy",
+      "premium",
+      "quick meal"
+    ],
+    "imageHint": "smoothie bottle",
+    "budgetTier": "balanced",
+    "speedTier": "fast",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_snack_biscuits_001",
@@ -2439,14 +2633,31 @@
     "price": 45,
     "etaMinutes": 9,
     "available": true,
+    "tags": ["snacks", "tea", "guests", "kids", "quick"],
+    "imageHint": "biscuit pack"
+  },
+  {
+    "id": "prod_snack_budget_combo_001",
+    "name": "Budget Namkeen Combo Pack",
+    "category": "Snacks",
+    "aisle": "Snacks & Party",
+    "price": 55,
+    "etaMinutes": 8,
     "tags": [
       "snacks",
-      "tea",
       "guests",
-      "kids",
+      "party",
+      "budget",
+      "value",
+      "fastest",
       "quick"
     ],
-    "imageHint": "biscuit pack"
+    "imageHint": "namkeen combo",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "mini",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_snack_chips_001",
@@ -2457,13 +2668,7 @@
     "price": 60,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "snacks",
-      "party",
-      "guests",
-      "ready-to-eat",
-      "quick"
-    ],
+    "tags": ["snacks", "party", "guests", "ready-to-eat", "quick"],
     "imageHint": "chips packet"
   },
   {
@@ -2475,13 +2680,7 @@
     "price": 95,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "snacks",
-      "party",
-      "guests",
-      "shareable",
-      "movie"
-    ],
+    "tags": ["snacks", "party", "guests", "shareable", "movie"],
     "imageHint": "nachos packet"
   },
   {
@@ -2493,13 +2692,31 @@
     "price": 85,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "movie",
-      "snacks",
-      "party",
-      "ready-to-eat"
-    ],
+    "tags": ["movie", "snacks", "party", "ready-to-eat"],
     "imageHint": "popcorn"
+  },
+  {
+    "id": "prod_snack_premium_platter_001",
+    "name": "Gourmet Snack Platter",
+    "category": "Snacks",
+    "aisle": "Snacks & Party",
+    "price": 320,
+    "etaMinutes": 22,
+    "tags": [
+      "snacks",
+      "guests",
+      "party",
+      "premium",
+      "complete",
+      "shareable",
+      "gourmet"
+    ],
+    "imageHint": "gourmet snacks",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_soap_001",
@@ -2510,12 +2727,7 @@
     "price": 105,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "bath",
-      "hygiene",
-      "personal care",
-      "daily essential"
-    ],
+    "tags": ["bath", "hygiene", "personal care", "daily essential"],
     "imageHint": "soap pack"
   },
   {
@@ -2527,12 +2739,7 @@
     "price": 40,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "soda",
-      "guests",
-      "party",
-      "drinks"
-    ],
+    "tags": ["soda", "guests", "party", "drinks"],
     "imageHint": "soda bottle"
   },
   {
@@ -2544,12 +2751,7 @@
     "price": 65,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "quick meal",
-      "cold",
-      "comfort",
-      "night"
-    ],
+    "tags": ["quick meal", "cold", "comfort", "night"],
     "imageHint": "soup sachet"
   },
   {
@@ -2561,13 +2763,7 @@
     "price": 50,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "spoons",
-      "party",
-      "guests",
-      "serving",
-      "dessert"
-    ],
+    "tags": ["spoons", "party", "guests", "serving", "dessert"],
     "imageHint": "spoons"
   },
   {
@@ -2579,12 +2775,7 @@
     "price": 160,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "stain",
-      "clothes",
-      "coffee spill",
-      "laundry"
-    ],
+    "tags": ["stain", "clothes", "coffee spill", "laundry"],
     "imageHint": "stain remover"
   },
   {
@@ -2596,12 +2787,7 @@
     "price": 450,
     "etaMinutes": 24,
     "available": true,
-    "tags": [
-      "cold",
-      "steam",
-      "wellness",
-      "comfort"
-    ],
+    "tags": ["cold", "steam", "wellness", "comfort"],
     "imageHint": "steam inhaler"
   },
   {
@@ -2613,12 +2799,7 @@
     "price": 75,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "study",
-      "office",
-      "project",
-      "planning"
-    ],
+    "tags": ["study", "office", "project", "planning"],
     "imageHint": "sticky notes"
   },
   {
@@ -2630,13 +2811,38 @@
     "price": 95,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "storage",
-      "packing",
-      "food",
-      "travel"
-    ],
+    "tags": ["storage", "packing", "food", "travel"],
     "imageHint": "ziplock bags"
+  },
+  {
+    "id": "prod_study_complete_kit_001",
+    "name": "Exam Night Complete Kit",
+    "category": "Office",
+    "aisle": "Work & Electronics",
+    "price": 360,
+    "etaMinutes": 19,
+    "tags": ["exam", "study", "office", "premium", "complete", "late night"],
+    "imageHint": "study complete kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_study_value_kit_001",
+    "name": "Exam Study Value Kit",
+    "category": "Office",
+    "aisle": "Work & Electronics",
+    "price": 120,
+    "etaMinutes": 9,
+    "tags": ["exam", "study", "office", "budget", "fastest", "notes"],
+    "imageHint": "study value kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_sugar_001",
@@ -2647,12 +2853,7 @@
     "price": 55,
     "etaMinutes": 12,
     "available": true,
-    "tags": [
-      "sugar",
-      "tea",
-      "kitchen",
-      "daily essential"
-    ],
+    "tags": ["sugar", "tea", "kitchen", "daily essential"],
     "imageHint": "sugar packet"
   },
   {
@@ -2664,12 +2865,7 @@
     "price": 60,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "repair",
-      "fix",
-      "broken",
-      "emergency"
-    ],
+    "tags": ["repair", "fix", "broken", "emergency"],
     "imageHint": "super glue"
   },
   {
@@ -2681,13 +2877,7 @@
     "price": 40,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "packing",
-      "project",
-      "repair",
-      "gift",
-      "tape"
-    ],
+    "tags": ["packing", "project", "repair", "gift", "tape"],
     "imageHint": "tape"
   },
   {
@@ -2699,13 +2889,7 @@
     "price": 140,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "tea",
-      "morning",
-      "guests",
-      "breakfast",
-      "beverage"
-    ],
+    "tags": ["tea", "morning", "guests", "breakfast", "beverage"],
     "imageHint": "tea box"
   },
   {
@@ -2717,12 +2901,7 @@
     "price": 220,
     "etaMinutes": 20,
     "available": true,
-    "tags": [
-      "wellness",
-      "health",
-      "fever",
-      "monitoring"
-    ],
+    "tags": ["wellness", "health", "fever", "monitoring"],
     "imageHint": "thermometer"
   },
   {
@@ -2734,13 +2913,7 @@
     "price": 65,
     "etaMinutes": 9,
     "available": true,
-    "tags": [
-      "tissues",
-      "guests",
-      "cleaning",
-      "spills",
-      "fast"
-    ],
+    "tags": ["tissues", "guests", "cleaning", "spills", "fast"],
     "imageHint": "tissue box"
   },
   {
@@ -2752,13 +2925,7 @@
     "price": 35,
     "etaMinutes": 8,
     "available": true,
-    "tags": [
-      "cold",
-      "travel",
-      "tissues",
-      "fast",
-      "personal care"
-    ],
+    "tags": ["cold", "travel", "tissues", "fast", "personal care"],
     "imageHint": "pocket tissues"
   },
   {
@@ -2770,12 +2937,7 @@
     "price": 130,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "bathroom",
-      "cleaning",
-      "hygiene",
-      "home"
-    ],
+    "tags": ["bathroom", "cleaning", "hygiene", "home"],
     "imageHint": "toilet cleaner"
   },
   {
@@ -2787,12 +2949,7 @@
     "price": 40,
     "etaMinutes": 11,
     "available": true,
-    "tags": [
-      "vegetable",
-      "cooking",
-      "salad",
-      "dinner"
-    ],
+    "tags": ["vegetable", "cooking", "salad", "dinner"],
     "imageHint": "tomatoes"
   },
   {
@@ -2804,12 +2961,7 @@
     "price": 55,
     "etaMinutes": 13,
     "available": true,
-    "tags": [
-      "travel",
-      "hygiene",
-      "forgot",
-      "personal care"
-    ],
+    "tags": ["travel", "hygiene", "forgot", "personal care"],
     "imageHint": "toothbrush"
   },
   {
@@ -2821,12 +2973,7 @@
     "price": 180,
     "etaMinutes": 18,
     "available": true,
-    "tags": [
-      "power cut",
-      "light",
-      "emergency",
-      "night"
-    ],
+    "tags": ["power cut", "light", "emergency", "night"],
     "imageHint": "torch"
   },
   {
@@ -2838,12 +2985,7 @@
     "price": 180,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "snack",
-      "healthy",
-      "travel",
-      "study"
-    ],
+    "tags": ["snack", "healthy", "travel", "study"],
     "imageHint": "trail mix"
   },
   {
@@ -2855,13 +2997,68 @@
     "price": 180,
     "etaMinutes": 22,
     "available": true,
-    "tags": [
-      "travel",
-      "packing",
-      "trip",
-      "organize"
-    ],
+    "tags": ["travel", "packing", "trip", "organize"],
     "imageHint": "travel pouch"
+  },
+  {
+    "id": "prod_travel_premium_toiletry_001",
+    "name": "Premium Travel Toiletry Kit",
+    "category": "Travel",
+    "aisle": "Travel Essentials",
+    "price": 390,
+    "etaMinutes": 21,
+    "tags": ["travel", "hygiene", "packing", "toiletry", "premium", "complete"],
+    "imageHint": "premium toiletry kit",
+    "budgetTier": "premium",
+    "speedTier": "standard",
+    "packSize": "large",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_travel_snack_budget_001",
+    "name": "Budget Travel Snack Pack",
+    "category": "Snacks",
+    "aisle": "Travel Essentials",
+    "price": 70,
+    "etaMinutes": 8,
+    "tags": ["travel", "snack", "budget", "value", "fastest", "packing"],
+    "imageHint": "travel snack pack",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_travel_snack_premium_001",
+    "name": "Trail & Protein Travel Pack",
+    "category": "Snacks",
+    "aisle": "Travel Essentials",
+    "price": 260,
+    "etaMinutes": 16,
+    "tags": ["travel", "snack", "protein", "premium", "complete", "healthy"],
+    "imageHint": "premium trail pack",
+    "budgetTier": "premium",
+    "speedTier": "fast",
+    "packSize": "medium",
+    "entityType": "PRODUCT",
+    "available": true
+  },
+  {
+    "id": "prod_travel_value_toiletry_001",
+    "name": "Travel Toiletry Value Kit",
+    "category": "Travel",
+    "aisle": "Travel Essentials",
+    "price": 130,
+    "etaMinutes": 10,
+    "tags": ["travel", "hygiene", "packing", "toiletry", "budget", "fastest"],
+    "imageHint": "travel toiletry kit",
+    "budgetTier": "save",
+    "speedTier": "express",
+    "packSize": "small",
+    "entityType": "PRODUCT",
+    "available": true
   },
   {
     "id": "prod_umbrella_001",
@@ -2872,12 +3069,7 @@
     "price": 299,
     "etaMinutes": 19,
     "available": true,
-    "tags": [
-      "rain",
-      "umbrella",
-      "weather",
-      "urgent"
-    ],
+    "tags": ["rain", "umbrella", "weather", "urgent"],
     "imageHint": "umbrella"
   },
   {
@@ -2889,13 +3081,7 @@
     "price": 199,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "charger",
-      "cable",
-      "electronics",
-      "work",
-      "travel"
-    ],
+    "tags": ["charger", "cable", "electronics", "work", "travel"],
     "imageHint": "USB cable"
   },
   {
@@ -2907,12 +3093,7 @@
     "price": 95,
     "etaMinutes": 14,
     "available": true,
-    "tags": [
-      "cold",
-      "comfort",
-      "wellness",
-      "night"
-    ],
+    "tags": ["cold", "comfort", "wellness", "night"],
     "imageHint": "vapor rub"
   },
   {
@@ -2924,13 +3105,7 @@
     "price": 90,
     "etaMinutes": 9,
     "available": true,
-    "tags": [
-      "water",
-      "travel",
-      "guests",
-      "hydration",
-      "emergency"
-    ],
+    "tags": ["water", "travel", "guests", "hydration", "emergency"],
     "imageHint": "water bottles"
   },
   {
@@ -2942,12 +3117,7 @@
     "price": 160,
     "etaMinutes": 16,
     "available": true,
-    "tags": [
-      "water",
-      "travel",
-      "gym",
-      "hydration"
-    ],
+    "tags": ["water", "travel", "gym", "hydration"],
     "imageHint": "water bottle"
   },
   {
@@ -2959,11 +3129,7 @@
     "price": 70,
     "etaMinutes": 15,
     "available": true,
-    "tags": [
-      "flour",
-      "cooking",
-      "daily essential"
-    ],
+    "tags": ["flour", "cooking", "daily essential"],
     "imageHint": "flour bag"
   },
   {
@@ -2975,12 +3141,7 @@
     "price": 55,
     "etaMinutes": 10,
     "available": true,
-    "tags": [
-      "breakfast",
-      "dairy",
-      "healthy",
-      "curd"
-    ],
+    "tags": ["breakfast", "dairy", "healthy", "curd"],
     "imageHint": "yogurt"
   }
 ]

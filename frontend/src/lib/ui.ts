@@ -33,6 +33,7 @@ export const navItems = [
   "Baby",
   "Cleaning",
   "Electronics",
+  "Deals",
 ];
 
 export const budgetOptions: { value: BudgetMode; label: string }[] = [
@@ -225,38 +226,16 @@ export function categoryMatches(product: StoreProduct, category: string) {
 }
 
 export function getWhileYouWaitSteps(plan: NowPlan) {
-  const category = String(plan.needCategory || "").toLowerCase();
-  const request = String(plan.userRequest || "").toLowerCase();
-  const text = `${category} ${request}`;
+  return (plan.whileYouWait || [])
+    .map((tip) => {
+      if (typeof tip === "string") return tip.trim();
 
-  if (
-    text.includes("first") ||
-    text.includes("aid") ||
-    text.includes("cut") ||
-    text.includes("wound") ||
-    text.includes("injury") ||
-    text.includes("bleeding") ||
-    text.includes("health_emergency")
-  ) {
-    return [
-      "Rinse gently with clean water if possible.",
-      "Apply light pressure with a clean cloth or tissue.",
-      "Use a bandage after bleeding slows.",
-      "Seek medical help if the cut is deep or bleeding does not slow.",
-    ];
-  }
+      const title = String(tip?.title || "").trim();
+      const text = String(tip?.text || "").trim();
 
-  if (
-    text.includes("cold") ||
-    text.includes("fever") ||
-    text.includes("throat")
-  ) {
-    return [
-      "Sip water regularly.",
-      "Rest in a comfortable position.",
-      "Monitor symptoms and seek care if they worsen.",
-    ];
-  }
-
-  return [];
+      if (title && text) return `${title}: ${text}`;
+      return text || title;
+    })
+    .filter(Boolean)
+    .slice(0, 4);
 }

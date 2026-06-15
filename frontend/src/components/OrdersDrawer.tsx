@@ -78,10 +78,12 @@ export function OrdersDrawer({
   open,
   onClose,
   orders,
+  onReorder,
 }: {
   open: boolean;
   onClose: () => void;
   orders: NowOrder[];
+  onReorder: (order: NowOrder) => void;
 }) {
   if (!open) return null;
 
@@ -176,21 +178,30 @@ export function OrdersDrawer({
                   <OrderProgress order={order} />
 
                   {items.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {items.slice(0, 5).map((item) => (
-                        <span
-                          key={item.productId}
-                          className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600"
-                        >
-                          {item.name}
-                        </span>
-                      ))}
-                      {items.length > 5 ? (
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
-                          +{items.length - 5} more
-                        </span>
-                      ) : null}
-                    </div>
+                    <>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {items.slice(0, 5).map((item) => (
+                          <span
+                            key={item.productId}
+                            className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600"
+                          >
+                            {item.name}
+                          </span>
+                        ))}
+                        {items.length > 5 ? (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                            +{items.length - 5} more
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <button
+                        onClick={() => onReorder(order)}
+                        className="mt-3 w-full rounded-xl bg-amber-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-amber-300"
+                      >
+                        Reorder
+                      </button>
+                    </>
                   ) : null}
                 </div>
               );

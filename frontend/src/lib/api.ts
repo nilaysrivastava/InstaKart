@@ -45,6 +45,14 @@ export type NowRegretItem = {
   reason: string;
 };
 
+export type NowWhileYouWaitTip =
+  | string
+  | {
+      title?: string;
+      text: string;
+      tone?: "medical" | "practical" | "fun" | "calm" | string;
+    };
+
 export type NowPlan = {
   planId: string;
   userRequest: string;
@@ -102,6 +110,7 @@ export type NowPlan = {
     totalDimensions: number;
     summary: string;
   };
+  whileYouWait?: NowWhileYouWaitTip[];
   confidence: {
     overall: number;
     needMatch: number;
