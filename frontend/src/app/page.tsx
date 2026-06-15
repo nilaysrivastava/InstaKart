@@ -44,7 +44,7 @@ export default function Home() {
   const [cartOpen, setCartOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
 
-  const [userRequest, setUserRequest] = useState("I have a party tonight");
+  const [userRequest, setUserRequest] = useState("");
   const [budgetMode, setBudgetMode] = useState<BudgetMode>("balanced");
   const [decisionMode, setDecisionMode] = useState<DecisionMode>("fastest");
   const [panicMode, setPanicMode] = useState(true);

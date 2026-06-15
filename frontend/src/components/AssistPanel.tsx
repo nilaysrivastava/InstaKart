@@ -222,22 +222,22 @@ export function AssistPanel({
         </div>
 
         <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-y-auto p-2 sm:gap-4 sm:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-          <section className="flex h-auto min-h-0 w-full min-w-0 flex-col rounded-2xl bg-white p-3 shadow-sm sm:min-h-[620px] sm:p-4 lg:h-full lg:min-h-full">
+          <section className="flex h-full min-w-0 flex-col rounded-2xl bg-white p-4 shadow-sm lg:min-h-full">
             <form
               onSubmit={onGenerate}
-              className="flex min-h-0 w-full min-w-0 flex-col justify-start sm:h-full sm:justify-center"
+              className="flex h-full min-w-0 flex-col justify-center"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-wide text-amber-600">
                     Tell us what happened
                   </p>
-                  <h2 className="mt-2 text-xl font-black leading-tight text-slate-950 sm:text-2xl">
+                  <h2 className="mt-2 text-2xl font-black leading-tight text-slate-950">
                     What do you need?
                   </h2>
                 </div>
 
-                <label className="flex w-fit cursor-pointer items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-black text-red-700">
+                <label className="flex cursor-pointer items-center gap-1 rounded-full bg-red-50 px-2 py-1 text-xs font-black text-red-700">
                   <input
                     type="checkbox"
                     checked={panicMode}
@@ -252,11 +252,11 @@ export function AssistPanel({
                 value={userRequest}
                 onChange={(event) => setUserRequest(event.target.value)}
                 rows={3}
-                className="mt-2 min-h-20 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-2 text-sm font-medium outline-none focus:border-amber-400 focus:bg-white sm:min-h-8"
+                className="mt-2 min-h-8 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-2 text-sm font-medium outline-none focus:border-amber-400 focus:bg-white"
                 placeholder="Tell us your need 😊"
               />
 
-              <div className="mt-3 sm:mt-1">
+              <div className="mt-1 flex-col items-center justify-center">
                 <p className="mb-2 text-xs font-black uppercase text-slate-500">
                   Try
                 </p>
@@ -266,7 +266,7 @@ export function AssistPanel({
                       type="button"
                       key={prompt}
                       onClick={() => setUserRequest(prompt)}
-                      className="w-full rounded-full border border-slate-200 px-3 py-1 text-center text-[10px] font-bold text-slate-600 hover:bg-amber-50 sm:text-left"
+                      className="rounded-full max-w-xs border border-slate-200 px-3 py-1 text-[10px] font-bold text-slate-600 hover:bg-amber-50"
                     >
                       {prompt}
                     </button>
@@ -279,7 +279,7 @@ export function AssistPanel({
                   <p className="mb-2 text-xs font-black uppercase text-slate-500">
                     Budget
                   </p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {budgetOptions.map((option) => (
                       <button
                         type="button"
@@ -301,7 +301,7 @@ export function AssistPanel({
                   <p className="mb-2 text-xs font-black uppercase text-slate-500">
                     Prefer
                   </p>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {modeOptions.map((option) => (
                       <button
                         type="button"
