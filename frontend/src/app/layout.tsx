@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Amazon Now - ReImagined",
+  title: "Amazon Now - Instant Cart",
   description: "Instant AI Powered Cart",
 };
 
