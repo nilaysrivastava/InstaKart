@@ -1,8 +1,8 @@
-# Amazon Now – Instant Cart
+# InstaKart
 
 > Situation-aware quick-commerce: describe the moment, get a verified cart in seconds.
 
-Amazon Now – Instant Cart is a HackOn with Amazon prototype that reimagines urgent shopping for quick-commerce customers. Instead of asking users to search product-by-product, the app lets them describe a real-life situation such as **“I cut my finger while cooking”**, **“guests are coming in 30 minutes”**, or **“there may be a power cut tonight”**. The system understands the need, retrieves relevant products, builds cart modes, verifies usefulness, and lets the customer review and checkout quickly.
+InstaKart reimagines urgent shopping for quick-commerce customers. Instead of asking users to search product-by-product, the app lets them describe a real-life situation such as **“I cut my finger while cooking”**, **“guests are coming in 30 minutes”**, or **“there may be a power cut tonight”**. The system understands the need, retrieves relevant products, builds cart modes, verifies usefulness, and lets the customer review and checkout quickly.
 
 ---
 
@@ -10,18 +10,16 @@ Amazon Now – Instant Cart is a HackOn with Amazon prototype that reimagines ur
 
 - **Demo Video:** https://drive.google.com/file/d/1D6Skov5TzY9RffPeIMj02N_qs4DCNugr/view?usp=sharing
 - **Live App:** https://main.d2a6skx8ok931x.amplifyapp.com
-- **Backend API:** https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com
-- **GitHub:** https://github.com/nilaysrivastava/hackon6-amazon-prototype
 
 ---
 
-## Problem Statement
+## Problem
 
 Quick-commerce customers often arrive with a situation, not a product list.
 
 A user may know what happened, but not every SKU required to solve it. Current shopping flows still require manual searching, comparing, remembering supporting items, and assembling a cart. This creates friction precisely when urgency is highest.
 
-Amazon Now – Instant Cart reduces that journey to:
+InstaKart reduces that journey to:
 
 ```txt
 Describe the situation → Review AI-built essentials → Checkout
@@ -33,7 +31,7 @@ The goal is simple: help customers discover, decide, and purchase urgent needs f
 
 ## What It Does
 
-Amazon Now – Instant Cart converts a natural-language or voice situation into a verified, ready-to-review shopping cart.
+InstaKart converts a natural-language or voice situation into a verified, ready-to-review shopping cart.
 
 ### Core Capabilities
 
@@ -195,7 +193,7 @@ A fast product cannot enter the cart only because it has a low ETA. It must be r
 
 ## Frontend Highlights
 
-The frontend is designed to feel like a production quick-commerce storefront, not a simple hackathon form.
+The frontend is designed to feel like a quick-commerce storefront.
 
 ### Implemented UI
 
@@ -276,7 +274,7 @@ The system is designed as a cloud-native, serverless architecture.
 
 ## Why This Is Different
 
-Most shopping assistants behave like chatbots or search wrappers. Amazon Now – Instant Cart is designed as a decision system.
+Most shopping assistants behave like chatbots or search wrappers. InstantKart is designed as a decision system.
 
 It does not simply return search results. It:
 
@@ -350,7 +348,7 @@ npx serverless deploy
 
 ## Team Notes
 
-This project was built for HackOn with Amazon as a working prototype focused on urgent quick-commerce discovery, decision-making, and checkout.
+This project was built as a working prototype focused on urgent quick-commerce discovery, decision-making, and checkout.
 
 The current version demonstrates:
 
@@ -364,6 +362,4 @@ The current version demonstrates:
 
 ---
 
-This project is intended for hackathon demonstration and evaluation.
-
-## Mode with 🧡 by Team_ZooZoo for HackOn with Amazon 6.0
+## Made with 🧡
