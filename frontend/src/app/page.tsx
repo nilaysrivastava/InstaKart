@@ -1,19 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AuthDialog } from "@/components/AuthDialog";
 import { AssistPanel } from "@/components/AssistPanel";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { Hero } from "@/components/Hero";
 import { OrdersDrawer } from "@/components/OrdersDrawer";
+import { ProfileDialog } from "@/components/ProfileDialog";
 import { ProductShelf } from "@/components/ProductShelf";
 import {
   checkoutNowOrder,
+  AUTH_REQUIRED_EVENT,
+  clearNowCart,
   generateNowPlan,
   getHealth,
+  getNowCart,
   getNowOrders,
   getNowProducts,
+  saveNowCart,
   sendNowFeedback,
   type BudgetMode,
   type DecisionMode,
@@ -21,10 +28,10 @@ import {
   type NowOrder,
   type NowPlan,
 } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import {
   buildDeckFromPlan,
   categoryMatches,
-  DEMO_USER_ID,
   formatPrice,
   getCartCount,
   getCartEta,
@@ -33,16 +40,34 @@ import {
   type StoreProduct,
 } from "@/lib/ui";
 
+type AuthMode = "signin" | "signup";
+type PendingAction =
+  | { type: "add-items"; items: NowCartItem[] }
+  | { type: "open-cart" }
+  | { type: "open-orders" }
+  | { type: "open-profile" }
+  | { type: "checkout" };
+
 export default function Home() {
+  const { user, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
   const [healthStatus, setHealthStatus] = useState("Checking");
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [orders, setOrders] = useState<NowOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
 
   const [assistOpen, setAssistOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("signin");
+  const [authDialogKey, setAuthDialogKey] = useState(0);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [cartOwner, setCartOwner] = useState<string | null>(null);
 
   const [userRequest, setUserRequest] = useState("");
   const [budgetMode, setBudgetMode] = useState<BudgetMode>("balanced");
@@ -77,7 +102,7 @@ export default function Home() {
     const grouped = new Map<string, StoreProduct[]>();
 
     filteredProducts.forEach((product) => {
-      const key = product.aisle || product.category || "Amazon Now";
+      const key = product.aisle || product.category || "InstaKart";
       const existing = grouped.get(key) || [];
       grouped.set(key, [...existing, product]);
     });
@@ -89,36 +114,20 @@ export default function Home() {
   const cartCount = getCartCount(cartItems);
   const cartEta = getCartEta(cartItems);
 
-  async function loadInitialData() {
-    try {
-      const [health, productResponse, orderResponse] = await Promise.all([
-        getHealth(),
-        getNowProducts(),
-        getNowOrders(DEMO_USER_ID).catch(() => ({
-          success: true,
-          count: 0,
-          orders: [],
-        })),
-      ]);
-
-      setHealthStatus(health?.success ? "Live" : "Offline");
-
-      const productList = productResponse.products || [];
-
-      productList.sort((a, b) => {
-        return (a.etaMinutes || 99) - (b.etaMinutes || 99);
-      });
-
-      setProducts(productList);
-      setOrders(orderResponse.orders || []);
-    } catch (err) {
-      console.error(err);
-      setHealthStatus("Offline");
-    }
-  }
-
   useEffect(() => {
-    loadInitialData();
+    Promise.all([getHealth(), getNowProducts()])
+      .then(([health, productResponse]) => {
+        setHealthStatus(health?.success ? "Live" : "Offline");
+        const productList = productResponse.products || [];
+        productList.sort(
+          (a, b) => (a.etaMinutes || 99) - (b.etaMinutes || 99)
+        );
+        setProducts(productList);
+      })
+      .catch((caught) => {
+        console.error(caught);
+        setHealthStatus("Offline");
+      });
 
     const sharedCart = new URLSearchParams(window.location.search).get(
       "sharedCart"
@@ -131,9 +140,11 @@ export default function Home() {
         };
 
         if (decoded.cartItems?.length) {
-          setCartItems(decoded.cartItems);
-          setUserRequest(decoded.userRequest || "Shared Amazon Now cart");
-          setCartOpen(true);
+          Promise.resolve().then(() => {
+            setCartItems(decoded.cartItems || []);
+            setUserRequest(decoded.userRequest || "Shared InstaKart cart");
+            setCartOpen(true);
+          });
         }
       } catch (err) {
         console.warn("Could not open shared cart", err);
@@ -141,7 +152,106 @@ export default function Home() {
     }
   }, []);
 
-  function addItemsToCart(itemsToAdd: NowCartItem[]) {
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      Promise.resolve().then(() => {
+        setOrders([]);
+        setOrdersLoading(false);
+        setOrdersError("");
+        setCartItems([]);
+        setCartOwner(null);
+      });
+      return;
+    }
+    if (user.isAdmin) {
+      Promise.resolve().then(() => {
+        setOrders([]);
+        setCartItems([]);
+        setCartOwner(null);
+      });
+      router.replace("/admin");
+      return;
+    }
+
+    let cancelled = false;
+
+    Promise.resolve().then(() => {
+      setOrdersLoading(true);
+      setOrdersError("");
+    });
+
+    Promise.allSettled([getNowOrders(), getNowCart()])
+      .then(([orderResult, cartResult]) => {
+        if (cancelled) return;
+
+        if (orderResult.status === "fulfilled") {
+          setOrders(orderResult.value.orders || []);
+        } else {
+          setOrders([]);
+          setOrdersError("Could not load your orders.");
+        }
+
+        if (cartResult.status === "fulfilled") {
+          setCartItems(cartResult.value.items || []);
+        } else {
+          setError("Could not load your cart.");
+        }
+
+        setOrdersLoading(false);
+        setCartOwner(user.userId);
+      })
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, router, user]);
+
+  useEffect(() => {
+    if (!user || cartOwner !== user.userId) return;
+    const timeout = window.setTimeout(() => {
+      saveNowCart(cartItems).catch((caught) => {
+        console.error("Could not save cart", caught);
+      });
+    }, 500);
+    return () => window.clearTimeout(timeout);
+  }, [cartItems, cartOwner, user]);
+
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      void logout();
+      setAuthMode("signin");
+      setAuthDialogKey((current) => current + 1);
+      setAuthOpen(true);
+    };
+    window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+    return () =>
+      window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthRequired);
+  }, [logout]);
+
+  useEffect(() => {
+    if (!user || !pendingAction || cartOwner !== user.userId) return;
+    const action = pendingAction;
+    Promise.resolve().then(() => {
+      setPendingAction(null);
+      if (action.type === "add-items") commitItemsToCart(action.items);
+      if (action.type === "open-cart") setCartOpen(true);
+      if (action.type === "open-orders") setOrdersOpen(true);
+      if (action.type === "open-profile") setProfileOpen(true);
+      if (action.type === "checkout") void handleCheckout();
+    });
+    // The checkout handler is intentionally replayed only when auth/cart hydration changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartOwner, pendingAction, user]);
+
+  function openAuth(mode: AuthMode, action: PendingAction | null = null) {
+    setAuthMode(mode);
+    setPendingAction(action);
+    setAuthDialogKey((current) => current + 1);
+    setAuthOpen(true);
+  }
+
+  function commitItemsToCart(itemsToAdd: NowCartItem[]) {
     if (!itemsToAdd.length) return;
 
     setCartItems((current) => {
@@ -177,6 +287,14 @@ export default function Home() {
     });
   }
 
+  function addItemsToCart(itemsToAdd: NowCartItem[]) {
+    if (!user) {
+      openAuth("signin", { type: "add-items", items: itemsToAdd });
+      return;
+    }
+    commitItemsToCart(itemsToAdd);
+  }
+
   function addToCart(item: NowCartItem) {
     addItemsToCart([item]);
   }
@@ -190,6 +308,7 @@ export default function Home() {
   function clearCart() {
     setCartItems([]);
     setCheckoutMessage("");
+    if (user) void clearNowCart().catch(() => null);
   }
 
   async function handleReorderOrder(order: NowOrder) {
@@ -203,7 +322,7 @@ export default function Home() {
 
     setPlan(order.plan);
     setDecisionMode(selectedMode);
-    setUserRequest(order.plan?.userRequest || "Reordered Amazon Now cart");
+    setUserRequest(order.plan?.userRequest || "Reordered InstaKart cart");
     setCheckoutMessage(
       `${reorderItems.length} items added from your previous order.`
     );
@@ -212,7 +331,6 @@ export default function Home() {
     setCartOpen(true);
 
     await sendNowFeedback({
-      userId: DEMO_USER_ID,
       planId: order.plan?.planId,
       action: "reordered_order",
       selectedMode,
@@ -251,24 +369,27 @@ export default function Home() {
     setIsGenerating(true);
 
     try {
-      const response = await generateNowPlan({
-        userId: DEMO_USER_ID,
-        userRequest: trimmed,
-        budgetMode,
-        decisionMode,
-        panicMode,
-      });
+      const response = await generateNowPlan(
+        {
+          userRequest: trimmed,
+          budgetMode,
+          decisionMode,
+          panicMode,
+        },
+        Boolean(user)
+      );
 
       setPlan(response.plan);
       setDeckItems(buildDeckFromPlan(response.plan, decisionMode));
 
-      await sendNowFeedback({
-        userId: DEMO_USER_ID,
-        planId: response.plan.planId,
-        action: "generated_recommendation_deck",
-        selectedMode: decisionMode,
-        note: trimmed,
-      }).catch(() => null);
+      if (user) {
+        await sendNowFeedback({
+          planId: response.plan.planId,
+          action: "generated_recommendation_deck",
+          selectedMode: decisionMode,
+          note: trimmed,
+        }).catch(() => null);
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "Failed to create cart.");
@@ -284,9 +405,8 @@ export default function Home() {
     addToCart(item);
     setDeckItems((current) => current.slice(1));
 
-    if (plan) {
+    if (plan && user) {
       await sendNowFeedback({
-        userId: DEMO_USER_ID,
         planId: plan.planId,
         action: "added_to_cart",
         productId: item.productId,
@@ -303,9 +423,8 @@ export default function Home() {
 
     setDeckItems((current) => current.slice(1));
 
-    if (plan) {
+    if (plan && user) {
       await sendNowFeedback({
-        userId: DEMO_USER_ID,
         planId: plan.planId,
         action: "skipped_recommendation",
         productId: item.productId,
@@ -316,8 +435,7 @@ export default function Home() {
     }
   }
 
-  function buildCheckoutPlan(): NowPlan {
-    const now = new Date().toISOString();
+  function buildCheckoutPlan(now: string): NowPlan {
 
     if (plan) {
       return {
@@ -341,8 +459,8 @@ export default function Home() {
     }
 
     return {
-      planId: `manual_${Date.now()}`,
-      userRequest: "Manual Amazon Now cart",
+      planId: `manual_${now}`,
+      userRequest: "Manual InstaKart cart",
       needCategory: "manual_cart",
       urgencyLabel: "Medium",
       urgencyScore: 50,
@@ -389,12 +507,12 @@ export default function Home() {
         reason: "Manual cart created from storefront selections.",
       },
       aiExplanation:
-        "This order was created from manual Amazon Now selections.",
+        "This order was created from manual InstaKart selections.",
       checkoutSummary: {
         estimatedTotal: cartTotal,
         itemCount: cartCount,
         etaMinutes: cartEta,
-        oneTapMessage: "Checkout your selected Amazon Now cart.",
+        oneTapMessage: "Checkout your selected InstaKart cart.",
       },
       metrics: {
         estimatedTimeToCartSeconds: 0,
@@ -402,7 +520,7 @@ export default function Home() {
         decisionsReducedTo: cartCount,
         forgottenEssentialsPrevented: 0,
       },
-      userId: DEMO_USER_ID,
+      userId: user?.userId,
       generatedAt: now,
       modelId: "manual",
     };
@@ -416,40 +534,45 @@ export default function Home() {
 
     try {
       const currentCart = plan.cartModes[decisionMode]?.items || [];
-      const response = await generateNowPlan({
-        userId: DEMO_USER_ID,
-        userRequest: plan.userRequest || userRequest,
-        budgetMode,
-        decisionMode,
-        panicMode,
-        refinementContext: {
-          originalRequest: plan.userRequest,
-          currentNeedCategory: plan.needCategory,
-          currentPeopleCount: plan.peopleCount,
-          currentCartItems: currentCart.map((item) => ({
-            productId: item.productId,
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price,
-            etaMinutes: item.etaMinutes,
-          })),
-          instruction: instruction.trim(),
+      const response = await generateNowPlan(
+        {
+          userRequest: plan.userRequest || userRequest,
+          budgetMode,
+          decisionMode,
+          panicMode,
+          refinementContext: {
+            originalRequest: plan.userRequest,
+            currentNeedCategory: plan.needCategory,
+            currentPeopleCount: plan.peopleCount,
+            currentCartItems: currentCart.map((item) => ({
+              productId: item.productId,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price,
+              etaMinutes: item.etaMinutes,
+            })),
+            instruction: instruction.trim(),
+          },
         },
-      });
+        Boolean(user)
+      );
 
       setPlan(response.plan);
       setDeckItems(buildDeckFromPlan(response.plan, decisionMode));
 
-      await sendNowFeedback({
-        userId: DEMO_USER_ID,
-        planId: response.plan.planId,
-        action: "refined_cart",
-        selectedMode: decisionMode,
-        note: instruction.trim(),
-      }).catch(() => null);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to update cart.");
+      if (user) {
+        await sendNowFeedback({
+          planId: response.plan.planId,
+          action: "refined_cart",
+          selectedMode: decisionMode,
+          note: instruction.trim(),
+        }).catch(() => null);
+      }
+    } catch (caught) {
+      console.error(caught);
+      setError(
+        caught instanceof Error ? caught.message : "Failed to update cart."
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -461,7 +584,7 @@ export default function Home() {
     const payload = window.btoa(
       JSON.stringify({
         userRequest:
-          plan?.userRequest || userRequest || "Shared Amazon Now cart",
+          plan?.userRequest || userRequest || "Shared InstaKart cart",
         cartItems,
       })
     );
@@ -471,15 +594,15 @@ export default function Home() {
     try {
       if (navigator.share) {
         await navigator.share({
-          title: "Amazon Now cart",
-          text: "Here is an Amazon Now cart you can review.",
+          title: "InstaKart cart",
+          text: "Here is an InstaKart cart you can review.",
           url: shareUrl,
         });
       } else {
         await navigator.clipboard.writeText(shareUrl);
         setCheckoutMessage("Cart link copied.");
       }
-    } catch (err) {
+    } catch {
       await navigator.clipboard.writeText(shareUrl).catch(() => null);
       setCheckoutMessage("Cart link copied.");
     }
@@ -487,26 +610,30 @@ export default function Home() {
 
   async function handleCheckout() {
     if (!cartItems.length) return;
+    if (!user) {
+      openAuth("signin", { type: "checkout" });
+      return;
+    }
 
     setIsCheckingOut(true);
     setCheckoutMessage("");
     setError("");
 
     try {
-      const checkoutPlan = buildCheckoutPlan();
+      const checkoutPlan = buildCheckoutPlan(new Date().toISOString());
 
       const response = await checkoutNowOrder({
-        userId: DEMO_USER_ID,
         plan: checkoutPlan,
         selectedMode: decisionMode,
       });
 
       setCheckoutMessage(response.message || "Order placed successfully.");
 
-      const orderResponse = await getNowOrders(DEMO_USER_ID);
+      const orderResponse = await getNowOrders();
       setOrders(orderResponse.orders || []);
 
       setCartItems([]);
+      await clearNowCart().catch(() => null);
       setCartOpen(false);
       setOrdersOpen(true);
     } catch (err) {
@@ -515,6 +642,34 @@ export default function Home() {
     } finally {
       setIsCheckingOut(false);
     }
+  }
+
+  async function handleLogout() {
+    setCartOpen(false);
+    setOrdersOpen(false);
+    setProfileOpen(false);
+    setAssistOpen(false);
+    setPendingAction(null);
+    setCartItems([]);
+    setOrders([]);
+    setOrdersLoading(false);
+    setOrdersError("");
+    setPlan(null);
+    setDeckItems([]);
+    await logout();
+  }
+
+  if (user?.isAdmin) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#eaeded] p-6">
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-amber-400 border-t-slate-900" />
+          <p className="mt-3 text-sm font-black text-slate-700">
+            Opening admin dashboard…
+          </p>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -526,8 +681,24 @@ export default function Home() {
         setActiveCategory={setActiveCategory}
         ordersLength={orders.length}
         cartCount={cartCount}
-        onOpenOrders={() => setOrdersOpen(true)}
-        onOpenCart={() => setCartOpen(true)}
+        authenticated={Boolean(user)}
+        authLoading={authLoading}
+        onLogin={() => openAuth("signin")}
+        onSignUp={() => openAuth("signup")}
+        onOpenOrders={() =>
+          user
+            ? setOrdersOpen(true)
+            : openAuth("signin", { type: "open-orders" })
+        }
+        onOpenCart={() =>
+          user ? setCartOpen(true) : openAuth("signin", { type: "open-cart" })
+        }
+        onOpenProfile={() =>
+          user
+            ? setProfileOpen(true)
+            : openAuth("signin", { type: "open-profile" })
+        }
+        onLogout={() => void handleLogout()}
       />
 
       <div className="mx-auto max-w-7xl px-4 py-5">
@@ -582,7 +753,8 @@ export default function Home() {
         onSkipDeckItem={handleSkipDeckItem}
         onOpenCart={() => {
           setAssistOpen(false);
-          setCartOpen(true);
+          if (user) setCartOpen(true);
+          else openAuth("signin", { type: "open-cart" });
         }}
         onRefine={handleRefineCart}
         error={error}
@@ -604,7 +776,26 @@ export default function Home() {
         open={ordersOpen}
         onClose={() => setOrdersOpen(false)}
         orders={orders}
+        loading={ordersLoading}
+        error={ordersError}
+        signedIn={Boolean(user)}
         onReorder={handleReorderOrder}
+      />
+      <ProfileDialog
+        open={profileOpen}
+        user={user}
+        onClose={() => setProfileOpen(false)}
+        onLogout={() => void handleLogout()}
+      />
+      <AuthDialog
+        key={authDialogKey}
+        open={authOpen}
+        initialMode={authMode}
+        onAuthenticated={() => setAuthOpen(false)}
+        onClose={() => {
+          setAuthOpen(false);
+          setPendingAction(null);
+        }}
       />
     </main>
   );

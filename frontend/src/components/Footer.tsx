@@ -7,10 +7,10 @@ export function Footer({ healthStatus }: { healthStatus: string }) {
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded bg-amber-400 text-base font-black text-slate-950">
-              a
+              IK
             </div>
             <div>
-              <p className="text-sm font-black leading-none">Amazon Now</p>
+              <p className="text-sm font-black leading-none">InstaKart</p>
               <p className="text-[10px] text-slate-300">Instant Cart</p>
             </div>
           </div>
@@ -21,20 +21,10 @@ export function Footer({ healthStatus }: { healthStatus: string }) {
           </p>
         </div>
 
-        <div>
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-            Flow
+        <div className="flex align-items-center">
+          <p className="text-1xl font-black tracking-wide text-slate-200">
+            Made with 🧡 by Nilay Srivastava
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {["Describe", "Review", "Add", "Checkout"].map((item) => (
-              <span
-                key={item}
-                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-slate-200"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
         </div>
 
         <div>

@@ -44,7 +44,7 @@ export function CartDrawer({
         className="absolute inset-0 bg-slate-950/45"
       />
 
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:rounded-l-3xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-lg font-black text-slate-950">Cart</h2>

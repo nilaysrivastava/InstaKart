@@ -14,18 +14,16 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
   const total = selectedCart?.items ? getCartTotal(selectedCart.items) : 0;
   const deadlineSafety = plan.deadlineSafety;
   const needDimensions = plan.needGraph?.dimensions || [];
-  const reminder = plan.regretPrevention?.[0];
   const waitSteps = getWhileYouWaitSteps(plan);
-  const substitution = plan.substitutions?.[0];
 
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-2 overflow-hidden">
+    <div className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white px-3 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">
             Summary
           </p>
-          <h3 className="text-base font-black text-slate-950">
+          <h3 className="break-words text-base font-black text-slate-950">
             {formatNeedLabel(plan.needCategory)}
           </h3>
         </div>
@@ -50,7 +48,7 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
       </div>
 
       {deadlineSafety?.message ? (
-        <p className="mt-1 rounded-xl bg-emerald-50 px-3 py-1 text-xs font-bold leading-5 text-emerald-800">
+        <p className="mt-1 break-words rounded-xl bg-emerald-50 px-3 py-1 text-xs font-bold leading-5 text-emerald-800">
           {deadlineSafety.message}
         </p>
       ) : null}
@@ -64,10 +62,10 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
             {waitSteps.map((step) => (
               <li
                 key={step}
-                className="flex gap-1 text-xs leading-5 text-slate-700"
+                className="flex min-w-0 items-start gap-1 text-xs leading-5 text-slate-700"
               >
                 <span className="text-amber-500">•</span>
-                <span>{step}</span>
+                <span className="min-w-0 break-words">{step}</span>
               </li>
             ))}
           </ul>
@@ -93,7 +91,7 @@ export function MiniPlanDetails({ plan }: { plan: NowPlan }) {
           {needDimensions.slice(0, 4).map((dimension) => (
             <span
               key={dimension.name}
-              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold text-slate-600"
+              className="max-w-full break-words rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold text-slate-600"
             >
               {dimension.covered ? "✓ " : ""}
               {formatNeedLabel(dimension.name)}

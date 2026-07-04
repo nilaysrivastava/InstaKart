@@ -20,7 +20,7 @@ export function ProductShelf({
               <div>
                 <h2 className="text-lg font-black text-slate-950">{aisle}</h2>
                 <p className="text-xs text-slate-500">
-                  Fast-moving Amazon Now essentials
+                  Fast-moving InstaKart essentials
                 </p>
               </div>
               <p className="text-xs font-black text-[#007185]">

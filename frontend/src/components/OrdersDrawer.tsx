@@ -30,7 +30,10 @@ function OrderProgress({ order }: { order: NowOrder }) {
             : elapsed > 8000
               ? 1
               : 0;
-    setStageIndex(initialStage);
+    const initialTimer = window.setTimeout(
+      () => setStageIndex(initialStage),
+      0
+    );
 
     const timers = [8000, 20000, 45000, 90000].map((delay, index) =>
       window.setTimeout(
@@ -39,7 +42,10 @@ function OrderProgress({ order }: { order: NowOrder }) {
       )
     );
 
-    return () => timers.forEach((timer) => window.clearTimeout(timer));
+    return () => {
+      window.clearTimeout(initialTimer);
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, [order.id, order.createdAt]);
 
   return (
@@ -78,11 +84,17 @@ export function OrdersDrawer({
   open,
   onClose,
   orders,
+  loading,
+  error,
+  signedIn,
   onReorder,
 }: {
   open: boolean;
   onClose: () => void;
   orders: NowOrder[];
+  loading: boolean;
+  error: string;
+  signedIn: boolean;
   onReorder: (order: NowOrder) => void;
 }) {
   if (!open) return null;
@@ -95,11 +107,13 @@ export function OrdersDrawer({
         className="absolute inset-0 bg-slate-950/45"
       />
 
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-lg flex-col bg-white shadow-2xl">
+      <aside className="absolute right-0 top-0 flex h-full w-full max-w-lg flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:rounded-l-3xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-lg font-black text-slate-950">My Orders</h2>
-            <p className="text-xs text-slate-500">{orders.length} orders</p>
+            <p className="text-xs text-slate-500">
+              {loading ? "Loading your orders…" : `${orders.length} orders`}
+            </p>
           </div>
 
           <button
@@ -111,7 +125,24 @@ export function OrdersDrawer({
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto p-5">
-          {orders.length ? (
+          {!signedIn ? (
+            <div className="rounded-2xl bg-slate-50 p-8 text-center text-sm text-slate-500">
+              Sign in to view your orders.
+            </div>
+          ) : loading ? (
+            <div className="space-y-3" aria-label="Loading orders">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-32 animate-pulse rounded-2xl bg-slate-100"
+                />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-2xl border border-red-100 bg-red-50 p-8 text-center text-sm font-semibold text-red-700">
+              Could not load your orders.
+            </div>
+          ) : orders.length ? (
             orders.map((order) => {
               const selectedMode = (order.selectedMode ||
                 order.plan?.recommendedMode ||
@@ -134,7 +165,7 @@ export function OrdersDrawer({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-black text-slate-950">
-                        {order.plan?.userRequest || "Amazon Now order"}
+                        {order.plan?.userRequest || "InstaKart order"}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {order.createdAt
@@ -208,7 +239,7 @@ export function OrdersDrawer({
             })
           ) : (
             <div className="rounded-2xl bg-slate-50 p-8 text-center text-sm text-slate-500">
-              No orders yet.
+              No orders yet
             </div>
           )}
         </div>

@@ -11,7 +11,7 @@ export function Hero({
     <>
       <section className="bg-white rounded-2xl mb-2">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <span className="text-lg font-black text-[#00a8a8]">amazon now</span>
+          <span className="text-lg font-black text-[#00a8a8]">InstaKart</span>
 
           <div className="flex items-center gap-3">
             <p className="text-xs font-medium text-slate-600">
@@ -26,7 +26,7 @@ export function Hero({
 
       <section className="rounded-2xl bg-cyan-100 p-6 text-center shadow-sm md:p-10">
         <p className="text-small font-black uppercase tracking-[0.2em] text-slate-500">
-          Instant Cart
+          InstaKart
         </p>
         <h1 className="mx-auto mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
           Need it now? Let AI build your cart.

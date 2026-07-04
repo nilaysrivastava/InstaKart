@@ -17,6 +17,8 @@ provider:
     BEDROCK_FALLBACK_MODEL_ID: ${env:BEDROCK_FALLBACK_MODEL_ID, 'amazon.nova-micro-v1:0'}
     BEDROCK_FAST_MODEL_ID: amazon.nova-micro-v1:0
     BEDROCK_EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_USER_POOL_CLIENT_ID: ${env:COGNITO_USER_POOL_CLIENT_ID}
 
   iam:
     role:
@@ -29,6 +31,7 @@ provider:
             - dynamodb:Query
             - dynamodb:DeleteItem
             - dynamodb:UpdateItem
+            - dynamodb:TransactWriteItems
           Resource:
             - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev
             - arn:aws:dynamodb:ap-south-1:*:table/hackon6-items-dev/index/*
@@ -47,7 +50,9 @@ provider:
   httpApi:
     cors:
       allowedOrigins:
-        - "*"
+        - http://localhost:3000
+        - http://127.0.0.1:3000
+        - https://main.d2a6skx8ok931x.amplifyapp.com
       allowedHeaders:
         - Content-Type
         - Authorization
@@ -55,8 +60,16 @@ provider:
         - GET
         - POST
         - PUT
+        - PATCH
         - DELETE
         - OPTIONS
+    authorizers:
+      cognitoJwt:
+        type: jwt
+        identitySource: $request.header.Authorization
+        issuerUrl: https://cognito-idp.${aws:region}.amazonaws.com/${env:COGNITO_USER_POOL_ID}
+        audience:
+          - ${env:COGNITO_USER_POOL_CLIENT_ID}
 
 functions:
   health:
@@ -102,6 +115,17 @@ functions:
       - httpApi:
           path: /now/plan
           method: POST
+          authorizer:
+            name: cognitoJwt
+
+  generateGuestNowPlan:
+    handler: src/handler.generateGuestNowPlan
+    timeout: 29
+    memorySize: 1024
+    events:
+      - httpApi:
+          path: /now/plan/guest
+          method: POST
 
   checkoutNowOrder:
     handler: src/handler.checkoutNowOrder
@@ -109,6 +133,8 @@ functions:
       - httpApi:
           path: /now/checkout
           method: POST
+          authorizer:
+            name: cognitoJwt
 
   listNowOrders:
     handler: src/handler.listNowOrders
@@ -116,6 +142,8 @@ functions:
       - httpApi:
           path: /now/orders
           method: GET
+          authorizer:
+            name: cognitoJwt
 
   trackNowOrder:
     handler: src/handler.trackNowOrder
@@ -123,6 +151,8 @@ functions:
       - httpApi:
           path: /now/orders/{orderId}/track
           method: GET
+          authorizer:
+            name: cognitoJwt
 
   saveNowFeedback:
     handler: src/handler.saveNowFeedback
@@ -130,6 +160,90 @@ functions:
       - httpApi:
           path: /now/feedback
           method: POST
+          authorizer:
+            name: cognitoJwt
+
+  getNowCart:
+    handler: src/handler.getNowCart
+    events:
+      - httpApi:
+          path: /now/cart
+          method: GET
+          authorizer:
+            name: cognitoJwt
+
+  saveNowCart:
+    handler: src/handler.saveNowCart
+    events:
+      - httpApi:
+          path: /now/cart
+          method: PUT
+          authorizer:
+            name: cognitoJwt
+
+  clearNowCart:
+    handler: src/handler.clearNowCart
+    events:
+      - httpApi:
+          path: /now/cart
+          method: DELETE
+          authorizer:
+            name: cognitoJwt
+
+  listAdminInventory:
+    handler: src/handler.listAdminInventory
+    events:
+      - httpApi:
+          path: /admin/inventory
+          method: GET
+          authorizer:
+            name: cognitoJwt
+
+  createAdminInventory:
+    handler: src/handler.createAdminInventory
+    events:
+      - httpApi:
+          path: /admin/inventory
+          method: POST
+          authorizer:
+            name: cognitoJwt
+
+  updateAdminInventory:
+    handler: src/handler.updateAdminInventory
+    events:
+      - httpApi:
+          path: /admin/inventory/{id}
+          method: PATCH
+          authorizer:
+            name: cognitoJwt
+
+  deleteAdminInventory:
+    handler: src/handler.deleteAdminInventory
+    events:
+      - httpApi:
+          path: /admin/inventory/{id}
+          method: DELETE
+          authorizer:
+            name: cognitoJwt
+
+  getAdminAnalytics:
+    handler: src/handler.getAdminAnalytics
+    events:
+      - httpApi:
+          path: /admin/analytics
+          method: GET
+          authorizer:
+            name: cognitoJwt
+
+  generateAdminInsights:
+    handler: src/handler.generateAdminInsights
+    timeout: 29
+    events:
+      - httpApi:
+          path: /admin/analytics/insights
+          method: POST
+          authorizer:
+            name: cognitoJwt
 
   listNowProducts:
     handler: src/handler.listNowProducts

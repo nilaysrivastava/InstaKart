@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
   type BudgetMode,
   type DecisionMode,
@@ -181,9 +181,7 @@ export function AssistPanel({
 }) {
   const [followUp, setFollowUp] = useState("");
 
-  const wasGeneratingRef = useRef(false);
-
-  const [loadingCopyIndex, setLoadingCopyIndex] = useState(0);
+  const loadingCopyIndex = 0;
 
   async function handleRefineSubmit(event: PreventableEvent) {
     event.preventDefault();
@@ -203,9 +201,9 @@ export function AssistPanel({
   const loadingCopy = loadingCopies[loadingCopyIndex] || loadingCopies[0];
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/50 p-0 sm:p-2 md:p-4">
-      <div className="mx-auto flex h-dvh max-w-6xl flex-col overflow-hidden rounded-none bg-[#eaeded] shadow-2xl sm:h-[calc(100vh-16px)] sm:rounded-2xl md:h-[calc(100vh-32px)]">
-        <div className="flex items-center justify-between bg-[#131921] px-4 py-3 text-white">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/50 p-0 sm:p-2 md:p-4">
+      <div className="mx-auto flex h-dvh w-full min-w-0 max-w-6xl flex-col overflow-hidden rounded-none bg-[#eaeded] shadow-2xl sm:h-[calc(100vh-16px)] sm:rounded-2xl md:h-[calc(100vh-32px)]">
+        <div className="flex shrink-0 items-center justify-between bg-[#131921] px-4 py-3 text-white">
           <div>
             <p className="text-base font-black">Instant Cart</p>
             <p className="text-xs text-slate-300">
@@ -221,11 +219,11 @@ export function AssistPanel({
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 items-stretch gap-3 overflow-y-auto p-2 sm:gap-4 sm:p-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-          <section className="flex h-full min-w-0 flex-col rounded-2xl bg-white p-4 shadow-sm lg:min-h-full">
+        <div className="grid min-h-0 flex-1 auto-rows-max grid-cols-[minmax(0,1fr)] items-start gap-3 overflow-x-hidden overflow-y-auto overscroll-contain p-2 sm:gap-4 sm:p-4 lg:auto-rows-fr lg:grid-cols-[340px_minmax(0,1fr)] lg:items-stretch">
+          <section className="flex h-auto min-w-0 flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-sm lg:h-full lg:min-h-0">
             <form
               onSubmit={onGenerate}
-              className="flex h-full min-w-0 flex-col justify-center"
+              className="flex h-auto min-w-0 flex-col justify-start lg:h-full lg:justify-center"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -352,14 +350,14 @@ export function AssistPanel({
           <section
             className={
               plan && !isGenerating
-                ? "grid h-full min-h-[520px] min-w-0 gap-4 rounded-2xl bg-white p-3 shadow-sm sm:min-h-[620px] sm:p-4 lg:min-h-full xl:grid-cols-[minmax(0,1fr)_300px]"
-                : "flex h-full min-h-[520px] min-w-0 flex-col items-center justify-center gap-4 rounded-2xl bg-white p-3 shadow-sm sm:min-h-[620px] sm:p-4 lg:min-h-full xl:flex-row"
+                ? "grid h-auto min-h-0 min-w-0 auto-rows-max grid-cols-[minmax(0,1fr)] gap-4 overflow-hidden rounded-2xl bg-white p-3 shadow-sm sm:p-4 lg:h-full lg:min-h-0 lg:auto-rows-auto xl:grid-cols-[minmax(0,1fr)_300px]"
+                : "flex h-auto min-h-[420px] min-w-0 flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl bg-white p-3 shadow-sm sm:p-4 lg:h-full lg:min-h-0 xl:flex-row"
             }
           >
             <div
               className={
                 plan && !isGenerating
-                  ? "flex min-w-0 flex-col justify-center py-2 sm:min-h-[430px] sm:py-0"
+                  ? "flex h-auto min-h-0 min-w-0 flex-col justify-start py-2 lg:h-full lg:justify-center lg:py-0"
                   : "flex w-full min-w-0 max-w-xl flex-col justify-center py-2 sm:py-0"
               }
             >
@@ -462,16 +460,16 @@ export function AssistPanel({
             <div
               className={
                 plan && !isGenerating
-                  ? "min-w-0"
+                  ? "flex h-auto min-h-0 min-w-0 flex-col gap-3 overflow-hidden xl:h-full xl:justify-center"
                   : "flex w-full min-w-0 max-w-sm items-center py-2 sm:py-0"
               }
             >
               {plan && !isGenerating ? (
                 <>
-                  <div className="mb-3 w-full min-w-0">
+                  <div className="w-full min-w-0 shrink-0">
                     <SituationTimeline plan={plan} />
                   </div>
-                  <div className="w-full min-w-0">
+                  <div className="w-full min-w-0 shrink-0">
                     <MiniPlanDetails plan={plan} />
                   </div>
                 </>

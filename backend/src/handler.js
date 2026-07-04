@@ -1,10 +1,14 @@
 const { randomUUID } = require("crypto");
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const {
   DynamoDBDocumentClient,
+  DeleteCommand,
+  GetCommand,
   PutCommand,
   ScanCommand,
   QueryCommand,
+  TransactWriteCommand,
 } = require("@aws-sdk/lib-dynamodb");
 const {
   BedrockRuntimeClient,
@@ -27,11 +31,14 @@ const BEDROCK_EMBEDDING_MODEL_ID =
   process.env.BEDROCK_EMBEDDING_MODEL_ID || "amazon.titan-embed-text-v2:0";
 const ENABLE_EMBEDDING_RANKING =
   process.env.ENABLE_EMBEDDING_RANKING !== "false";
+const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || "";
+const COGNITO_USER_POOL_CLIENT_ID =
+  process.env.COGNITO_USER_POOL_CLIENT_ID || "";
 
 const PRODUCT_INDEX_NAME = "EntityTypeAisleIndex";
 const USER_INDEX_NAME = "UserCreatedAtIndex";
 const INVENTORY_CACHE_TTL_MS = Number(
-  process.env.INVENTORY_CACHE_TTL_MS || 60000
+  process.env.INVENTORY_CACHE_TTL_MS || 5000
 );
 const PLANNER_TIMEOUT_MS = Number(process.env.PLANNER_TIMEOUT_MS || 18000);
 
@@ -61,6 +68,78 @@ const parseBody = (event) => {
     return null;
   }
 };
+
+const localCognitoVerifier =
+  COGNITO_USER_POOL_ID && COGNITO_USER_POOL_CLIENT_ID
+    ? CognitoJwtVerifier.create({
+        userPoolId: COGNITO_USER_POOL_ID,
+        tokenUse: "access",
+        clientId: COGNITO_USER_POOL_CLIENT_ID,
+      })
+    : null;
+
+const getAuthenticatedUser = async (event) => {
+  let claims = event.requestContext?.authorizer?.jwt?.claims;
+
+  if (process.env.IS_OFFLINE) {
+    const authorization =
+      event.headers?.authorization || event.headers?.Authorization || "";
+    const token = authorization.startsWith("Bearer ")
+      ? authorization.slice(7)
+      : "";
+
+    if (!token || !localCognitoVerifier) return null;
+
+    try {
+      claims = await localCognitoVerifier.verify(token);
+    } catch (error) {
+      console.warn("Local Cognito token verification failed:", error.message);
+      return null;
+    }
+  }
+
+  const userId = claims?.sub;
+
+  if (!userId) return null;
+
+  return {
+    userId,
+    email: claims.email || "",
+    username: claims["cognito:username"] || claims.username || "",
+    groups: getCognitoGroups(claims),
+  };
+};
+
+const unauthorizedResponse = () =>
+  jsonResponse(401, {
+    success: false,
+    message: "Sign in is required.",
+  });
+
+const getCognitoGroups = (claims = {}) => {
+  const groups = claims["cognito:groups"];
+  if (Array.isArray(groups)) return groups.map(String);
+  if (typeof groups === "string") {
+    return groups
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .map((group) => group.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const getAdminUser = async (event) => {
+  const user = await getAuthenticatedUser(event);
+  if (!user) return null;
+  return user.groups.includes("admin") ? user : null;
+};
+
+const forbiddenResponse = () =>
+  jsonResponse(403, {
+    success: false,
+    message: "Administrator access is required.",
+  });
 
 const clampNumber = (value, min, max, fallback) => {
   const number = Number(value);
@@ -432,13 +511,28 @@ const scanByEntityType = async (entityType, limit = 100) => {
   return items.slice(0, limit);
 };
 
+const getProductQuantity = (product = {}) => {
+  const quantity = Number(product.quantity);
+  if (Number.isFinite(quantity)) return Math.max(0, Math.floor(quantity));
+  return product.available === false || product.isAvailable === false ? 0 : 100;
+};
+
+const isProductPurchasable = (product = {}) =>
+  product.available !== false &&
+  product.isAvailable !== false &&
+  getProductQuantity(product) > 0;
+
 const normalizeProducts = (products = []) =>
   products
-    .filter((product) => product.available !== false)
     .map((product) => ({
       ...product,
       price: Number(product.price || 0),
       etaMinutes: Number(product.etaMinutes || 999),
+      quantity: getProductQuantity(product),
+      isAvailable:
+        product.isAvailable !== false && product.available !== false,
+      available:
+        product.isAvailable !== false && product.available !== false,
       tags: Array.isArray(product.tags) ? product.tags : [],
     }))
     .sort((a, b) => Number(a.etaMinutes || 999) - Number(b.etaMinutes || 999));
@@ -461,14 +555,7 @@ const getInventory = async ({ forceRefresh = false } = {}) => {
 
   if (!forceRefresh && hasCache) {
     if (isExpired) {
-      console.log(
-        "Inventory cache stale; serving stale data and refreshing in background."
-      );
-      refreshInventoryCache().catch((error) => {
-        console.warn("Background inventory refresh failed:", {
-          message: error.message,
-        });
-      });
+      return refreshInventoryCache();
     }
     return inventoryCache.items;
   }
@@ -732,7 +819,7 @@ const buildShoppingIntentPrompt = ({
   decisionMode,
   panicMode,
 }) => `
-You are a retrieval-intent generator for an Amazon Now instant cart.
+You are a retrieval-intent generator for an InstaKart instant cart.
 Convert the user's sentence into a product-need description for semantic search.
 
 User sentence: ${userRequest}
@@ -982,7 +1069,7 @@ User has previously skipped these products: ${JSON.stringify(
     : "";
 
   return `
-You are the final quality gate for an Amazon Now instant cart.
+You are the final quality gate for an InstaKart instant cart.
 Your job is to remove weak, filler, indirectly related, or merely fast products.
 
 User situation: ${userRequest}
@@ -1936,7 +2023,7 @@ const generateDynamicWhileYouWaitTips = async ({
     .filter(Boolean);
 
   const prompt = `
-You are writing the "while this gets ready" micro-advice section for Amazon Now.
+You are writing the "while this gets ready" micro-advice section for InstaKart.
 
 Generate 3 short tips for this exact customer situation. The tips must be dynamic and specific to the user's input, not generic emergency text.
 
@@ -2323,7 +2410,7 @@ const buildPlannerPrompt = ({
   refinementContext,
   shoppingIntentContext,
 }) => `
-You are Amazon Now Assist, an AI product-selection planner for urgent quick-commerce.
+You are InstaKart Assist, an AI product-selection planner for urgent quick-commerce.
 
 Select the best products for the user's real-life need using ONLY the inventory candidates.
 Return ONLY valid JSON. No markdown. No commentary.
@@ -2876,8 +2963,11 @@ module.exports.seedNowInventory = async () =>
       "Product catalog is managed in DynamoDB. Use backend/scripts/seed-products.js for controlled catalog seeding.",
   });
 
-module.exports.generateNowPlan = async (event) => {
+const handleGenerateNowPlan = async (event, { allowGuest = false } = {}) => {
   try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser && !allowGuest) return unauthorizedResponse();
+
     const body = parseBody(event);
     if (!body) {
       return jsonResponse(400, {
@@ -2887,7 +2977,7 @@ module.exports.generateNowPlan = async (event) => {
     }
 
     const userRequest = body.userRequest?.trim();
-    const userId = body.userId || "demo-user-001";
+    const userId = authUser?.userId || null;
     const budgetMode = validBudgetMode(body.budgetMode || "balanced");
     const decisionMode = validDecisionMode(body.decisionMode || "fastest");
     const panicMode = Boolean(body.panicMode);
@@ -2910,7 +3000,9 @@ module.exports.generateNowPlan = async (event) => {
       });
     }
 
-    const inventory = await getInventory();
+    const inventory = (
+      await getInventory({ forceRefresh: true })
+    ).filter(isProductPurchasable);
 
     let plan;
 
@@ -2949,35 +3041,44 @@ module.exports.generateNowPlan = async (event) => {
       plan = fallbackPlan;
     }
 
-    await docClient.send(
-      new PutCommand({
-        TableName: ITEMS_TABLE,
-        Item: {
-          id: plan.planId,
-          entityType: "SHOPPING_PLAN",
-          userId,
-          userRequest,
-          plan,
-          modelId: plan.modelId,
-          usedFallback: plan.usedFallback,
-          createdAt: new Date().toISOString(),
-        },
-      })
-    );
+    if (userId) {
+      await docClient.send(
+        new PutCommand({
+          TableName: ITEMS_TABLE,
+          Item: {
+            id: plan.planId,
+            entityType: "SHOPPING_PLAN",
+            userId,
+            userRequest,
+            plan,
+            modelId: plan.modelId,
+            usedFallback: plan.usedFallback,
+            createdAt: new Date().toISOString(),
+          },
+        })
+      );
+    }
 
     return jsonResponse(200, { success: true, plan });
   } catch (error) {
     console.error("generateNowPlan error:", error);
     return jsonResponse(500, {
       success: false,
-      message: "Failed to generate Amazon Now plan",
+      message: "Failed to generate InstaKart plan",
       error: error.message,
     });
   }
 };
 
+module.exports.generateNowPlan = (event) => handleGenerateNowPlan(event);
+module.exports.generateGuestNowPlan = (event) =>
+  handleGenerateNowPlan(event, { allowGuest: true });
+
 module.exports.checkoutNowOrder = async (event) => {
   try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
     const body = parseBody(event);
     if (!body) {
       return jsonResponse(400, {
@@ -2986,7 +3087,7 @@ module.exports.checkoutNowOrder = async (event) => {
       });
     }
 
-    const userId = body.userId || "demo-user-001";
+    const userId = authUser.userId;
     const plan = body.plan;
     const selectedMode = validDecisionMode(
       body.selectedMode || plan?.recommendedMode || "fastest"
@@ -2994,6 +3095,53 @@ module.exports.checkoutNowOrder = async (event) => {
 
     if (!plan) {
       return jsonResponse(400, { success: false, message: "plan is required" });
+    }
+
+    const checkoutItems = plan.cartModes?.[selectedMode]?.items || [];
+    if (!checkoutItems.length) {
+      return jsonResponse(400, {
+        success: false,
+        message: "The selected cart is empty.",
+      });
+    }
+
+    const inventory = await getInventory({ forceRefresh: true });
+    const productsById = new Map(
+      inventory.map((product) => [product.id, product])
+    );
+    const requestedQuantities = new Map();
+
+    checkoutItems.forEach((item) => {
+      requestedQuantities.set(
+        item.productId,
+        Number(requestedQuantities.get(item.productId) || 0) +
+          Math.max(1, Math.floor(Number(item.quantity || 1)))
+      );
+    });
+
+    if (requestedQuantities.size > 99) {
+      return jsonResponse(400, {
+        success: false,
+        message: "A checkout can contain at most 99 unique products.",
+      });
+    }
+
+    const unavailableItems = [...requestedQuantities.entries()]
+      .filter(([productId, quantity]) => {
+        const product = productsById.get(productId);
+        return (
+          !product ||
+          !isProductPurchasable(product) ||
+          getProductQuantity(product) < quantity
+        );
+      })
+      .map(([productId]) => productsById.get(productId)?.name || productId);
+
+    if (unavailableItems.length) {
+      return jsonResponse(409, {
+        success: false,
+        message: `Some items are out of stock: ${unavailableItems.join(", ")}`,
+      });
     }
 
     const order = {
@@ -3006,9 +3154,38 @@ module.exports.checkoutNowOrder = async (event) => {
       createdAt: new Date().toISOString(),
     };
 
+    const updatedAt = new Date().toISOString();
     await docClient.send(
-      new PutCommand({ TableName: ITEMS_TABLE, Item: order })
+      new TransactWriteCommand({
+        TransactItems: [
+          ...[...requestedQuantities.entries()].map(
+            ([productId, quantity]) => ({
+              Update: {
+                TableName: ITEMS_TABLE,
+                Key: { id: productId },
+                UpdateExpression:
+                  "SET quantity = if_not_exists(quantity, :legacyQuantity) - :quantity, updatedAt = :updatedAt",
+                ConditionExpression:
+                  "(attribute_not_exists(quantity) OR quantity >= :quantity) AND (attribute_not_exists(available) OR available = :true) AND (attribute_not_exists(isAvailable) OR isAvailable = :true)",
+                ExpressionAttributeValues: {
+                  ":legacyQuantity": 100,
+                  ":quantity": quantity,
+                  ":updatedAt": updatedAt,
+                  ":true": true,
+                },
+              },
+            })
+          ),
+          {
+            Put: {
+              TableName: ITEMS_TABLE,
+              Item: order,
+            },
+          },
+        ],
+      })
     );
+    inventoryCache = { items: null, fetchedAt: 0 };
 
     return jsonResponse(201, {
       success: true,
@@ -3017,6 +3194,13 @@ module.exports.checkoutNowOrder = async (event) => {
     });
   } catch (error) {
     console.error("checkoutNowOrder error:", error);
+    if (error.name === "TransactionCanceledException") {
+      return jsonResponse(409, {
+        success: false,
+        message:
+          "Inventory changed while checking out. Review your cart and try again.",
+      });
+    }
     return jsonResponse(500, {
       success: false,
       message: "Failed to checkout order",
@@ -3027,17 +3211,14 @@ module.exports.checkoutNowOrder = async (event) => {
 
 module.exports.listNowOrders = async (event) => {
   try {
-    const userId =
-      event.queryStringParameters?.userId ||
-      event.queryStringParameters?.userID;
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
 
-    let orders;
-    if (userId) {
-      const entities = await queryUserEntities(userId, 120);
-      orders = entities.filter((item) => item.entityType === "ORDER");
-    } else {
-      orders = await scanByEntityType("ORDER", 120);
-    }
+    const entities = await queryUserEntities(authUser.userId, 120);
+    const orders = entities.filter(
+      (item) =>
+        item.entityType === "ORDER" && item.userId === authUser.userId
+    );
 
     orders.sort(
       (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
@@ -3060,6 +3241,9 @@ module.exports.listNowOrders = async (event) => {
 
 module.exports.saveNowFeedback = async (event) => {
   try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
     const body = parseBody(event);
     if (!body) {
       return jsonResponse(400, {
@@ -3071,7 +3255,7 @@ module.exports.saveNowFeedback = async (event) => {
     const feedback = {
       id: `feedback_${randomUUID()}`,
       entityType: "FEEDBACK",
-      userId: body.userId || "demo-user-001",
+      userId: authUser.userId,
       planId: body.planId || "",
       action: body.action || "unknown",
       productId: body.productId || "",
@@ -3153,6 +3337,9 @@ const computeOrderStatus = (order = {}) => {
 
 module.exports.trackNowOrder = async (event) => {
   try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
     const orderId =
       event.pathParameters?.orderId || event.queryStringParameters?.orderId;
     if (!orderId) {
@@ -3163,7 +3350,9 @@ module.exports.trackNowOrder = async (event) => {
     }
 
     const orders = await scanByEntityType("ORDER", 500);
-    const order = orders.find((item) => item.id === orderId);
+    const order = orders.find(
+      (item) => item.id === orderId && item.userId === authUser.userId
+    );
 
     if (!order) {
       return jsonResponse(404, { success: false, message: "Order not found" });
@@ -3183,6 +3372,552 @@ module.exports.trackNowOrder = async (event) => {
     return jsonResponse(500, {
       success: false,
       message: "Failed to track order",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.getNowCart = async (event) => {
+  try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
+    const result = await docClient.send(
+      new GetCommand({
+        TableName: ITEMS_TABLE,
+        Key: { id: `cart_${authUser.userId}` },
+      })
+    );
+
+    return jsonResponse(200, {
+      success: true,
+      items: result.Item?.items || [],
+      updatedAt: result.Item?.updatedAt || null,
+    });
+  } catch (error) {
+    console.error("getNowCart error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to load cart",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.saveNowCart = async (event) => {
+  try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
+    const body = parseBody(event);
+    if (!body || !Array.isArray(body.items)) {
+      return jsonResponse(400, {
+        success: false,
+        message: "items must be an array",
+      });
+    }
+
+    const items = body.items.slice(0, 100).map((item) => ({
+      productId: safeString(item.productId),
+      name: safeString(item.name),
+      quantity: clampNumber(item.quantity, 1, 99, 1),
+      price: clampNumber(item.price, 0, 1000000, 0),
+      etaMinutes: clampNumber(item.etaMinutes, 0, 1440, 0),
+      reason: safeString(item.reason),
+    }));
+    const updatedAt = new Date().toISOString();
+
+    await docClient.send(
+      new PutCommand({
+        TableName: ITEMS_TABLE,
+        Item: {
+          id: `cart_${authUser.userId}`,
+          entityType: "CART",
+          userId: authUser.userId,
+          items,
+          createdAt: updatedAt,
+          updatedAt,
+        },
+      })
+    );
+
+    return jsonResponse(200, { success: true, items, updatedAt });
+  } catch (error) {
+    console.error("saveNowCart error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to save cart",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.clearNowCart = async (event) => {
+  try {
+    const authUser = await getAuthenticatedUser(event);
+    if (!authUser) return unauthorizedResponse();
+
+    await docClient.send(
+      new DeleteCommand({
+        TableName: ITEMS_TABLE,
+        Key: { id: `cart_${authUser.userId}` },
+      })
+    );
+
+    return jsonResponse(200, { success: true, items: [] });
+  } catch (error) {
+    console.error("clearNowCart error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to clear cart",
+      error: error.message,
+    });
+  }
+};
+
+const parseInventoryProduct = (body = {}, existing = null) => {
+  const value = { ...(existing || {}), ...body };
+  const name = safeString(value.name);
+  const category = safeString(value.category);
+  const price = Number(value.price);
+  const quantity = getProductQuantity(value);
+  const etaMinutes = Number(value.etaMinutes);
+
+  if (!name) return { error: "name is required" };
+  if (!category) return { error: "category is required" };
+  if (!Number.isFinite(price) || price < 0) {
+    return { error: "price must be zero or greater" };
+  }
+  if (!Number.isFinite(quantity) || quantity < 0) {
+    return { error: "quantity must be zero or greater" };
+  }
+  if (!Number.isFinite(etaMinutes) || etaMinutes < 0) {
+    return { error: "etaMinutes must be zero or greater" };
+  }
+
+  const tags = Array.isArray(value.tags)
+    ? value.tags.map((tag) => safeString(String(tag))).filter(Boolean)
+    : String(value.tags || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean);
+  const isAvailable =
+    typeof value.isAvailable === "boolean"
+      ? value.isAvailable
+      : value.available !== false;
+  const now = new Date().toISOString();
+
+  return {
+    product: {
+      ...(existing || {}),
+      id:
+        existing?.id ||
+        safeString(body.id) ||
+        `prod_${randomUUID().replace(/-/g, "").slice(0, 16)}`,
+      entityType: "PRODUCT",
+      name,
+      category,
+      description: safeString(value.description),
+      price,
+      quantity: Math.floor(quantity),
+      imageUrl: safeString(value.imageUrl),
+      etaMinutes: Math.floor(etaMinutes),
+      storeLocation: safeString(value.storeLocation),
+      aisle: safeString(value.aisle, category),
+      tags,
+      isAvailable,
+      available: isAvailable,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now,
+    },
+  };
+};
+
+module.exports.listAdminInventory = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+
+    const products = normalizeProducts(await queryProducts(500)).map(
+      stripProductEmbedding
+    );
+    return jsonResponse(200, {
+      success: true,
+      count: products.length,
+      products,
+    });
+  } catch (error) {
+    console.error("listAdminInventory error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to load inventory",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.createAdminInventory = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+
+    const body = parseBody(event);
+    if (!body) {
+      return jsonResponse(400, { success: false, message: "Invalid JSON body" });
+    }
+
+    const parsed = parseInventoryProduct(body);
+    if (parsed.error) {
+      return jsonResponse(400, { success: false, message: parsed.error });
+    }
+
+    const existing = await docClient.send(
+      new GetCommand({
+        TableName: ITEMS_TABLE,
+        Key: { id: parsed.product.id },
+      })
+    );
+    if (existing.Item) {
+      return jsonResponse(409, {
+        success: false,
+        message: "A product with this ID already exists.",
+      });
+    }
+
+    await docClient.send(
+      new PutCommand({ TableName: ITEMS_TABLE, Item: parsed.product })
+    );
+    inventoryCache = { items: null, fetchedAt: 0 };
+    return jsonResponse(201, { success: true, product: parsed.product });
+  } catch (error) {
+    console.error("createAdminInventory error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to create product",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.updateAdminInventory = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+
+    const id = safeString(event.pathParameters?.id);
+    const body = parseBody(event);
+    if (!id || !body) {
+      return jsonResponse(400, {
+        success: false,
+        message: "Product ID and valid JSON body are required.",
+      });
+    }
+
+    const result = await docClient.send(
+      new GetCommand({ TableName: ITEMS_TABLE, Key: { id } })
+    );
+    if (!result.Item || result.Item.entityType !== "PRODUCT") {
+      return jsonResponse(404, {
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    const parsed = parseInventoryProduct(body, result.Item);
+    if (parsed.error) {
+      return jsonResponse(400, { success: false, message: parsed.error });
+    }
+
+    await docClient.send(
+      new PutCommand({ TableName: ITEMS_TABLE, Item: parsed.product })
+    );
+    inventoryCache = { items: null, fetchedAt: 0 };
+    return jsonResponse(200, { success: true, product: parsed.product });
+  } catch (error) {
+    console.error("updateAdminInventory error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to update product",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.deleteAdminInventory = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+
+    const id = safeString(event.pathParameters?.id);
+    if (!id) {
+      return jsonResponse(400, {
+        success: false,
+        message: "Product ID is required.",
+      });
+    }
+
+    const result = await docClient.send(
+      new GetCommand({ TableName: ITEMS_TABLE, Key: { id } })
+    );
+    if (!result.Item || result.Item.entityType !== "PRODUCT") {
+      return jsonResponse(404, {
+        success: false,
+        message: "Product not found.",
+      });
+    }
+
+    await docClient.send(
+      new DeleteCommand({ TableName: ITEMS_TABLE, Key: { id } })
+    );
+    inventoryCache = { items: null, fetchedAt: 0 };
+    return jsonResponse(200, { success: true, id });
+  } catch (error) {
+    console.error("deleteAdminInventory error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to delete product",
+      error: error.message,
+    });
+  }
+};
+
+const buildAdminAnalytics = async () => {
+  const [rawProducts, orders] = await Promise.all([
+    queryProducts(500),
+    scanByEntityType("ORDER", 1000),
+  ]);
+  const products = normalizeProducts(rawProducts);
+  const productsById = new Map(products.map((product) => [product.id, product]));
+  const inventoryByCategory = new Map();
+  const productSales = new Map();
+  const categorySales = new Map();
+  const revenueByDate = new Map();
+  let estimatedRevenue = 0;
+
+  products.forEach((product) => {
+    const category = safeString(product.category, "Uncategorized");
+    const current = inventoryByCategory.get(category) || {
+      category,
+      products: 0,
+      quantity: 0,
+    };
+    current.products += 1;
+    current.quantity += getProductQuantity(product);
+    inventoryByCategory.set(category, current);
+  });
+
+  orders.forEach((order) => {
+    const selectedMode = validDecisionMode(
+      order.selectedMode || order.plan?.recommendedMode || "fastest"
+    );
+    const items = order.plan?.cartModes?.[selectedMode]?.items || [];
+    const orderRevenue = Number(
+      order.plan?.checkoutSummary?.estimatedTotal ||
+        items.reduce(
+          (sum, item) =>
+            sum + Number(item.price || 0) * Number(item.quantity || 1),
+          0
+        )
+    );
+    estimatedRevenue += orderRevenue;
+    const date = String(order.createdAt || "").slice(0, 10);
+    if (date) {
+      const current = revenueByDate.get(date) || {
+        date,
+        orders: 0,
+        revenue: 0,
+      };
+      current.orders += 1;
+      current.revenue += orderRevenue;
+      revenueByDate.set(date, current);
+    }
+
+    items.forEach((item) => {
+      const quantity = Math.max(1, Number(item.quantity || 1));
+      const product = productsById.get(item.productId);
+      const productName = product?.name || item.name || item.productId;
+      const category = product?.category || "Uncategorized";
+      productSales.set(
+        productName,
+        Number(productSales.get(productName) || 0) + quantity
+      );
+      categorySales.set(
+        category,
+        Number(categorySales.get(category) || 0) + quantity
+      );
+    });
+  });
+
+  const outOfStockProducts = products.filter(
+    (product) => getProductQuantity(product) === 0
+  ).length;
+  const lowStockProducts = products.filter((product) => {
+    const quantity = getProductQuantity(product);
+    return quantity > 0 && quantity < 5;
+  }).length;
+  const unavailableProducts = products.filter(
+    (product) => product.available === false || product.isAvailable === false
+  ).length;
+  const availableProducts = products.filter(isProductPurchasable).length;
+  const toTopList = (map, nameKey) =>
+    [...map.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([name, quantity]) => ({ [nameKey]: name, quantity }));
+
+  return {
+    totalProducts: products.length,
+    availableProducts,
+    outOfStockProducts,
+    lowStockProducts,
+    unavailableProducts,
+    totalOrders: orders.length,
+    estimatedRevenue: Math.round(estimatedRevenue * 100) / 100,
+    averageOrderValue:
+      orders.length > 0
+        ? Math.round((estimatedRevenue / orders.length) * 100) / 100
+        : 0,
+    inventoryByCategory: [...inventoryByCategory.values()].sort(
+      (a, b) => b.quantity - a.quantity
+    ),
+    stockStatusBreakdown: [
+      {
+        status: "Available",
+        value: products.filter((product) => {
+          const quantity = getProductQuantity(product);
+          return isProductPurchasable(product) && quantity >= 5;
+        }).length,
+      },
+      {
+        status: "Low stock",
+        value: products.filter((product) => {
+          const quantity = getProductQuantity(product);
+          return isProductPurchasable(product) && quantity > 0 && quantity < 5;
+        }).length,
+      },
+      {
+        status: "Out of stock",
+        value: products.filter(
+          (product) =>
+            product.available !== false &&
+            product.isAvailable !== false &&
+            getProductQuantity(product) === 0
+        ).length,
+      },
+      { status: "Unavailable", value: unavailableProducts },
+    ],
+    revenueTrend: [...revenueByDate.values()]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-30),
+    topProducts: toTopList(productSales, "name"),
+    topCategories: toTopList(categorySales, "category"),
+  };
+};
+
+const buildRuleBasedInsights = (analytics) => {
+  const insights = [];
+  if (analytics.lowStockProducts > 0) {
+    insights.push(
+      `${analytics.lowStockProducts} products have fewer than 5 units and should be reviewed for restocking.`
+    );
+  }
+  if (analytics.outOfStockProducts > 0) {
+    insights.push(
+      `${analytics.outOfStockProducts} products are out of stock and unavailable to customers and AI recommendations.`
+    );
+  }
+  if (analytics.unavailableProducts > 0) {
+    insights.push(
+      `${analytics.unavailableProducts} products are manually disabled; confirm whether they should return to sale.`
+    );
+  }
+  if (analytics.topCategories[0]) {
+    insights.push(
+      `${analytics.topCategories[0].category} is the most ordered category with ${analytics.topCategories[0].quantity} units ordered.`
+    );
+  }
+  if (analytics.totalOrders === 0) {
+    insights.push(
+      "No orders are available yet; monitor early category demand before making large stock changes."
+    );
+  } else {
+    insights.push(
+      `Average order value is ₹${Math.round(analytics.averageOrderValue)} across ${analytics.totalOrders} orders.`
+    );
+  }
+  return insights.slice(0, 5);
+};
+
+module.exports.getAdminAnalytics = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+    const analytics = await buildAdminAnalytics();
+    return jsonResponse(200, { success: true, analytics });
+  } catch (error) {
+    console.error("getAdminAnalytics error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to load business analytics",
+      error: error.message,
+    });
+  }
+};
+
+module.exports.generateAdminInsights = async (event) => {
+  try {
+    const admin = await getAdminUser(event);
+    if (!admin) return forbiddenResponse();
+    const analytics = await buildAdminAnalytics();
+    const fallbackInsights = buildRuleBasedInsights(analytics);
+    let insights = fallbackInsights;
+    let source = "rules";
+
+    try {
+      const summary = {
+        totalProducts: analytics.totalProducts,
+        availableProducts: analytics.availableProducts,
+        outOfStockProducts: analytics.outOfStockProducts,
+        lowStockProducts: analytics.lowStockProducts,
+        unavailableProducts: analytics.unavailableProducts,
+        totalOrders: analytics.totalOrders,
+        estimatedRevenue: analytics.estimatedRevenue,
+        averageOrderValue: analytics.averageOrderValue,
+        inventoryByCategory: analytics.inventoryByCategory.slice(0, 10),
+        topProducts: analytics.topProducts.slice(0, 5),
+        topCategories: analytics.topCategories.slice(0, 5),
+      };
+      const text = await callBedrockConverse({
+        modelId: BEDROCK_FAST_MODEL_ID,
+        maxTokens: 350,
+        temperature: 0.2,
+        topP: 0.7,
+        prompt: `You are an ecommerce inventory analyst for an Indian store. All monetary values are Indian rupees. Always format currency with the ₹ symbol or INR, never with dollars. Return JSON only in this shape: {"insights":["short actionable insight"]}. Produce 3 to 5 concise insights based only on these aggregate metrics. Do not invent facts or mention users.\n${JSON.stringify(summary)}`,
+      });
+      const parsed = parseJsonObjectFromText(text);
+      if (Array.isArray(parsed.insights) && parsed.insights.length) {
+        insights = parsed.insights
+          .map((insight) => safeString(String(insight)))
+          .map((insight) => insight.replace(/\$/g, "₹"))
+          .filter(Boolean)
+          .slice(0, 5);
+        source = "bedrock";
+      }
+    } catch (aiError) {
+      console.warn("Admin insights AI fallback used:", aiError.message);
+    }
+
+    return jsonResponse(200, {
+      success: true,
+      insights,
+      source,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("generateAdminInsights error:", error);
+    return jsonResponse(500, {
+      success: false,
+      message: "Failed to generate business insights",
       error: error.message,
     });
   }
@@ -3250,8 +3985,7 @@ module.exports.embedProducts = async () => {
 
 module.exports.listNowProducts = async (event) => {
   try {
-    const forceRefresh = event.queryStringParameters?.refresh === "true";
-    const products = await getInventory({ forceRefresh });
+    const products = await getInventory();
 
     return jsonResponse(200, {
       success: true,
@@ -3262,7 +3996,7 @@ module.exports.listNowProducts = async (event) => {
     console.error("listNowProducts error:", error);
     return jsonResponse(500, {
       success: false,
-      message: "Failed to list Amazon Now products",
+      message: "Failed to list InstaKart products",
       error: error.message,
     });
   }

@@ -12,8 +12,6 @@ export type PreventableEvent = {
   preventDefault: () => void;
 };
 
-export const DEMO_USER_ID = "demo-user-001";
-
 export const quickPrompts = [
   "I have a party tonight",
   "4 friends are coming in 30 minutes",
@@ -104,7 +102,7 @@ export function productToCartItem(product: StoreProduct): NowCartItem {
     quantity: 1,
     price: product.price,
     etaMinutes: product.etaMinutes,
-    reason: "Added from Amazon Now.",
+    reason: "Added from InstaKart.",
   };
 }
 

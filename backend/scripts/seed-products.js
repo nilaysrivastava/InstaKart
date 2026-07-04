@@ -119,7 +119,7 @@ async function seedProducts() {
       .filter(Boolean)
       .join(" ")
       .toLowerCase(),
-    seededFor: "amazon-now-assist",
+    seededFor: "instakart-assist",
     createdAt: product.createdAt || now,
     updatedAt: now,
   }));
