@@ -13,23 +13,33 @@
   [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-7C3AED)](https://aws.amazon.com/bedrock/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-  [Live App](https://main.d2a6skx8ok931x.amplifyapp.com) ·
-  [Backend API](https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com) ·
-  [Demo Video](https://drive.google.com/file/d/1zaPHkdI_9jAul-5NumaGW08eMzueBlt1/view?usp=sharing)
+  [Live App](https://main.dcvcdyghn1yjx.amplifyapp.com) ·
 </div>
 
 ---
 
 ## What is InstaKart?
 
-Most shopping apps begin with a product search. InstaKart begins with a
-situation:
+InstaKart is an AI-powered quick-commerce platform built around a new shopping experience: **turning natural language needs into checkout-ready carts**.
 
-> “Guests are coming in 30 minutes.”
+Most ecommerce apps are product-first. Users search for each item manually, compare options, add products one by one, and build the cart themselves.
 
-The app interprets urgency, budget, people count, delivery time, and product
-relevance to build a ready-to-review cart. Customers can compare Fastest,
-Best Value, and Most Complete options before checking out.
+InstaKart is **situation-first**.
+
+A user can simply say:
+
+> “Guests are coming in 30 minutes.”  
+> “I have a fever and need essentials fast.”  
+> “Plan a quick breakfast for 4 people.”  
+> “I need last-minute hostel snacks under ₹500.”
+
+InstaKart understands the intent behind the request, detects urgency, estimates quantity, considers budget, checks inventory availability, compares delivery time, and generates a structured cart instantly.
+
+The key innovation is the **natural-language-to-cart pipeline**: instead of making users search for products, InstaKart lets users describe the situation, and the system builds the cart intelligently.
+
+Beyond cart generation, InstaKart includes a complete ecommerce workflow with user authentication, personalized carts, order history, profile management, admin inventory controls, stock tracking, out-of-stock handling, and business analytics.
+
+InstaKart combines AI reasoning with real ecommerce operations, making the shopping flow faster, more contextual, and more human than traditional search-based commerce.
 
 <div align="center">
   <img src="frontend/src/app/og-image.png" alt="InstaKart smart cart experience" width="820" />
@@ -332,17 +342,8 @@ Global secondary indexes support product and user-entity queries.
 └── README.md
 ```
 
-## Project links
-
-| Resource | Link |
-|---|---|
-| Live application | [AWS Amplify deployment](https://main.d2a6skx8ok931x.amplifyapp.com) |
-| Backend API | [API Gateway endpoint](https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com) |
-| Demo video | [Google Drive](https://drive.google.com/file/d/1zaPHkdI_9jAul-5NumaGW08eMzueBlt1/view?usp=sharing) |
-| Source code | [GitHub repository](https://github.com/nilaysrivastava/hackon6-amazon-prototype) |
-
 ---
 
 <div align="center">
-  <strong>Built for fast decisions when the situation matters.</strong>
+  <strong>Built with 🧡 for fast decisions when the situation matters.</strong>
 </div>
