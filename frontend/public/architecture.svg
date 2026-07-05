@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">InstaKart AWS architecture</title>
+  <desc id="desc">Customers and admins use a Next.js application authenticated by Cognito. API Gateway routes requests to Lambda, which accesses DynamoDB and Amazon Bedrock models.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0f172a" flood-opacity=".13"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#64748b"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#cbd5e1;stroke-width:2;rx:18;filter:url(#shadow)}
+      .aws{fill:#fff7ed;stroke:#fb923c}
+      .data{fill:#ecfdf5;stroke:#34d399}
+      .ai{fill:#f5f3ff;stroke:#a78bfa}
+      .title{font:700 20px Arial,sans-serif;fill:#0f172a}
+      .sub{font:14px Arial,sans-serif;fill:#475569}
+      .label{font:700 14px Arial,sans-serif;fill:#334155}
+      .line{fill:none;stroke:#64748b;stroke-width:3;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect width="1200" height="520" rx="24" fill="#f8fafc"/>
+  <rect x="0" y="0" width="1200" height="68" rx="24" fill="url(#header)"/>
+  <rect x="0" y="44" width="1200" height="24" fill="url(#header)"/>
+  <text x="48" y="43" font-family="Arial,sans-serif" font-size="25" font-weight="800" fill="#111827">InstaKart · Serverless AWS Architecture</text>
+
+  <rect class="box" x="45" y="185" width="180" height="120"/>
+  <text class="title" x="135" y="225" text-anchor="middle">Users</text>
+  <text class="sub" x="135" y="254" text-anchor="middle">Customer</text>
+  <text class="sub" x="135" y="278" text-anchor="middle">Administrator</text>
+
+  <rect class="box" x="295" y="110" width="220" height="120"/>
+  <text class="title" x="405" y="151" text-anchor="middle">Next.js Web App</text>
+  <text class="sub" x="405" y="180" text-anchor="middle">Storefront · Cart · Orders</text>
+  <text class="sub" x="405" y="204" text-anchor="middle">Admin Dashboard</text>
+
+  <rect class="box aws" x="295" y="300" width="220" height="110"/>
+  <text class="title" x="405" y="343" text-anchor="middle">Amazon Cognito</text>
+  <text class="sub" x="405" y="372" text-anchor="middle">Authentication</text>
+  <text class="sub" x="405" y="395" text-anchor="middle">Customer / admin groups</text>
+
+  <rect class="box aws" x="585" y="110" width="210" height="120"/>
+  <text class="title" x="690" y="151" text-anchor="middle">API Gateway</text>
+  <text class="sub" x="690" y="180" text-anchor="middle">HTTP API · CORS</text>
+  <text class="sub" x="690" y="204" text-anchor="middle">Cognito JWT authorizer</text>
+
+  <rect class="box aws" x="585" y="300" width="210" height="110"/>
+  <text class="title" x="690" y="343" text-anchor="middle">AWS Lambda</text>
+  <text class="sub" x="690" y="372" text-anchor="middle">Commerce and AI logic</text>
+  <text class="sub" x="690" y="395" text-anchor="middle">Server-side authorization</text>
+
+  <rect class="box data" x="885" y="110" width="260" height="120"/>
+  <text class="title" x="1015" y="151" text-anchor="middle">Amazon DynamoDB</text>
+  <text class="sub" x="1015" y="180" text-anchor="middle">Products · Inventory · Carts</text>
+  <text class="sub" x="1015" y="204" text-anchor="middle">Orders · Plans · Feedback</text>
+
+  <rect class="box ai" x="885" y="300" width="260" height="150"/>
+  <text class="title" x="1015" y="340" text-anchor="middle">Amazon Bedrock</text>
+  <text class="sub" x="1015" y="370" text-anchor="middle">Nova planning and verification</text>
+  <text class="sub" x="1015" y="394" text-anchor="middle">Titan semantic embeddings</text>
+  <text class="sub" x="1015" y="418" text-anchor="middle">Business insights</text>
+
+  <path class="line" d="M225 220H295"/>
+  <path class="line" d="M225 270C260 270 260 355 295 355"/>
+  <path class="line" d="M515 170H585"/>
+  <path class="line" d="M515 355H585"/>
+  <path class="line" d="M690 230V300"/>
+  <path class="line" d="M795 340C840 340 840 170 885 170"/>
+  <path class="line" d="M795 370H885"/>
+
+  <text class="label" x="550" y="153" text-anchor="middle">HTTPS</text>
+  <text class="label" x="838" y="153" text-anchor="middle">Read / write</text>
+  <text class="label" x="838" y="355" text-anchor="middle">Inference</text>
+</svg>

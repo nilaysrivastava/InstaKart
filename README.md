@@ -61,22 +61,13 @@ order actions require authentication.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    U[Customer or Admin] --> F[Next.js + React]
-    F --> C[Amazon Cognito]
-    F --> A[API Gateway HTTP API]
-    A --> L[AWS Lambda]
-    L --> D[(DynamoDB)]
-    L --> B[Amazon Bedrock]
-
-    B --> N[Amazon Nova]
-    B --> T[Titan Embeddings]
-
-    D --> I[Products & Inventory]
-    D --> O[Orders & Carts]
-    D --> M[Plans & Feedback]
-```
+<div align="center">
+  <img
+    src="frontend/public/architecture.svg"
+    alt="InstaKart architecture: Next.js, Cognito, API Gateway, Lambda, DynamoDB, and Amazon Bedrock"
+    width="100%"
+  />
+</div>
 
 | Layer | Technology | Responsibility |
 |---|---|---|
