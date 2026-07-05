@@ -2,6 +2,8 @@ service: hackon6-api
 
 frameworkVersion: "3"
 
+useDotenv: true
+
 provider:
   name: aws
   runtime: nodejs20.x
@@ -53,6 +55,7 @@ provider:
         - http://localhost:3000
         - http://127.0.0.1:3000
         - https://main.d2a6skx8ok931x.amplifyapp.com
+        - https://main.dcvcdyghn1yjx.amplifyapp.com
       allowedHeaders:
         - Content-Type
         - Authorization
