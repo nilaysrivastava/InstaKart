@@ -13,7 +13,7 @@
   [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-7C3AED)](https://aws.amazon.com/bedrock/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-  [Live App](https://main.dcvcdyghn1yjx.amplifyapp.com) ·
+  [Live App](https://main.dcvcdyghn1yjx.amplifyapp.com)
 </div>
 
 ---
