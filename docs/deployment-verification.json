@@ -1,0 +1,61 @@
+{
+  "verifiedAt": "2026-11-24T15:57:15.487Z",
+  "url": "https://instakart-nilay.onrender.com/api",
+  "checks": [
+    {
+      "test": "Three isolated accounts authenticate through Supabase",
+      "pass": true
+    },
+    {
+      "test": "Customer cannot elevate with user_metadata groups",
+      "pass": true
+    },
+    {
+      "test": "Cart persistence and isolation across two accounts",
+      "pass": true
+    },
+    {
+      "test": "Cart clearing",
+      "pass": true
+    },
+    {
+      "test": "Authenticated planning persists an owned plan",
+      "pass": true
+    },
+    {
+      "test": "Account-scoped feedback",
+      "pass": true
+    },
+    {
+      "test": "Admin inventory creation with customer denial",
+      "pass": true
+    },
+    {
+      "test": "Concurrent checkout prevents oversell and enforces catalog prices/ETA",
+      "pass": true
+    },
+    {
+      "test": "Private order history",
+      "pass": true
+    },
+    {
+      "test": "Owned order tracking",
+      "pass": true
+    },
+    {
+      "test": "Disabled products cannot be purchased",
+      "pass": true
+    },
+    {
+      "test": "Admin analytics and built-in business insights",
+      "pass": true
+    },
+    {
+      "test": "Admin inventory deletion",
+      "pass": true
+    }
+  ],
+  "fixtures": "Temporary accounts and products, removed after testing",
+  "emailDelivery": "Not tested; custom SMTP pending",
+  "cleanupVerified": true
+}

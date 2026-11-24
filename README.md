@@ -132,7 +132,7 @@ npm audit --prefix frontend
 npm audit --prefix backend
 ```
 
-The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Database access tests simulate separate authenticated identities and roll back all fixtures. Live signed-in API tests verified authentication, carts, planning, feedback, administrator inventory creation, concurrent checkout and private order history. Remaining tracking and administrator mutation/analytics checks are pending completion of the isolated test run.
+The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Database access tests simulate separate authenticated identities and roll back all fixtures. Live signed-in API tests verified authentication, carts, planning, feedback, administrator inventory creation, concurrent checkout and private order history. All 13 signed-in checks passed, including order tracking, disabled stock, inventory updates/deletion and administrator analytics/insights. Temporary fixtures were cleaned up.
 
 ## Free-plan operation
 
@@ -147,10 +147,10 @@ The service is live on the Render Free plan in Singapore. The Supabase project i
 - Guest recommendations passed three live scenarios, including a ₹500 cap and a group of four.
 - Missing and forged tokens were rejected; customer and admin routes enforce authentication.
 - Database tests verified private carts, prohibited inventory writes, canonical checkout prices, stock deduction, owner verification and oversell prevention.
-- Live tests with three temporary Supabase accounts verified login, metadata-based privilege-escalation rejection, private carts, cart clearing, owned plans, feedback, admin-only product creation, concurrent stock safety, canonical checkout prices/ETA and private order history. Test accounts and records were removed afterward.
+- All 13 live checks passed using three temporary Supabase accounts: login, privilege-escalation rejection, private carts, cart clearing, owned plans, feedback, admin-only inventory creation, concurrent stock safety, canonical checkout prices/ETA, private order history, owner-only tracking, disabled stock enforcement, admin inventory update/deletion, analytics and business insights. Test accounts and records were removed afterward.
 - The browser verified three cart modes and the sign-in prompt on a protected Add action.
 - Backend tests and frontend lint passed; frontend/backend audits and Supabase security advisor reported no findings.
 
 **Authentication configuration:** The production Site URL and redirect allowlist are configured for https://instakart-nilay.onrender.com.
 
-**Still pending:** Custom SMTP, public signup delivery, permanent administrator account assignment, and the remaining order-tracking/admin update, deletion and analytics checks. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
+**Still pending:** Custom SMTP and public signup email delivery. No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
