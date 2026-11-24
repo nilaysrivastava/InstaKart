@@ -132,7 +132,7 @@ npm audit --prefix frontend
 npm audit --prefix backend
 ```
 
-The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Database access tests simulate separate authenticated identities and roll back all fixtures. Signed-in customer/admin browser tests remain pending Supabase email setup.
+The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Database access tests simulate separate authenticated identities and roll back all fixtures. Live signed-in API tests verified authentication, carts, planning, feedback, administrator inventory creation, concurrent checkout and private order history. Remaining tracking and administrator mutation/analytics checks are pending completion of the isolated test run.
 
 ## Free-plan operation
 
@@ -147,7 +147,10 @@ The service is live on the Render Free plan in Singapore. The Supabase project i
 - Guest recommendations passed three live scenarios, including a ₹500 cap and a group of four.
 - Missing and forged tokens were rejected; customer and admin routes enforce authentication.
 - Database tests verified private carts, prohibited inventory writes, canonical checkout prices, stock deduction, owner verification and oversell prevention.
+- Live tests with three temporary Supabase accounts verified login, metadata-based privilege-escalation rejection, private carts, cart clearing, owned plans, feedback, admin-only product creation, concurrent stock safety, canonical checkout prices/ETA and private order history. Test accounts and records were removed afterward.
 - The browser verified three cart modes and the sign-in prompt on a protected Add action.
 - Backend tests and frontend lint passed; frontend/backend audits and Supabase security advisor reported no findings.
 
-**Still pending:** Supabase Auth Site URL/redirects, signup email configuration, public signup delivery, administrator account assignment, and signed-in end-to-end shopping/admin tests. Complete dashboard authentication to finish these steps. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
+**Authentication configuration:** The production Site URL and redirect allowlist are configured for https://instakart-nilay.onrender.com.
+
+**Still pending:** Custom SMTP, public signup delivery, permanent administrator account assignment, and the remaining order-tracking/admin update, deletion and analytics checks. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
