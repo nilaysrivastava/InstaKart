@@ -1,15 +1,6 @@
 import { getAccessToken } from "@/lib/auth";
 
-const DEFAULT_API_BASE_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://127.0.0.1:3001"
-    : "https://np1mz79jr2.execute-api.ap-south-1.amazonaws.com";
-
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL
-)
-  .trim()
-  .replace(/\/+$/, "");
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "/api").trim().replace(/\/+$/, "");
 
 if (process.env.NODE_ENV === "development") {
   console.info(`[InstaKart] API base URL: ${API_BASE_URL}`);
@@ -431,7 +422,7 @@ export async function generateAdminInsights() {
   return requestJson<{
     success: boolean;
     insights: string[];
-    source: "bedrock" | "rules";
+    source: "model" | "rules";
     generatedAt: string;
   }>("/admin/analytics/insights", { method: "POST" });
 }

@@ -1,196 +1,58 @@
 "use client";
 
-import { Amplify } from "aws-amplify";
-import {
-  confirmSignUp,
-  fetchAuthSession,
-  getCurrentUser,
-  signIn,
-  signOut,
-  signUp,
-} from "aws-amplify/auth";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createClient, type User } from "@supabase/supabase-js";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-const userPoolId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID;
-const userPoolClientId = process.env.NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID;
-const missingConfig = [
-  !userPoolId ? "NEXT_PUBLIC_COGNITO_USER_POOL_ID" : null,
-  !userPoolClientId ? "NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID" : null,
-].filter((value): value is string => Boolean(value));
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+const missingConfig = [!url ? "NEXT_PUBLIC_SUPABASE_URL" : null, !key ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" : null].filter((x): x is string => Boolean(x));
+const supabase = url && key ? createClient(url, key) : null;
 
-if (userPoolId && userPoolClientId) {
-  Amplify.configure({
-    Auth: {
-      Cognito: {
-        userPoolId,
-        userPoolClientId,
-        loginWith: { email: true },
-      },
-    },
-  });
+export type AuthUser = { userId: string; username: string; email: string; groups: string[]; isAdmin: boolean };
+export function hasAdminGroup(groups: unknown) { return Array.isArray(groups) && groups.includes("admin"); }
+function authUser(user: User | null): AuthUser | null {
+  if (!user) return null;
+  // app_metadata is controlled by administrators; user_metadata is editable.
+  const groups = Array.isArray(user.app_metadata?.groups) ? user.app_metadata.groups : [];
+  return {userId: user.id, username: user.user_metadata?.name || user.email || "", email: user.email || "", groups, isAdmin: hasAdminGroup(groups)};
 }
-
-export type AuthUser = {
-  userId: string;
-  username: string;
-  email: string;
-  groups: string[];
-  isAdmin: boolean;
-};
-
-export function hasAdminGroup(groupsClaim: unknown) {
-  if (Array.isArray(groupsClaim)) {
-    return groupsClaim.map(String).includes("admin");
-  }
-  if (typeof groupsClaim === "string") {
-    return groupsClaim
-      .replace(/^\[|\]$/g, "")
-      .split(",")
-      .map((group) => group.trim().replace(/^"|"$/g, ""))
-      .includes("admin");
-  }
-  return false;
-}
-
-function readGroups(groupsClaim: unknown) {
-  if (Array.isArray(groupsClaim)) return groupsClaim.map(String);
-  if (typeof groupsClaim === "string") {
-    return groupsClaim
-      .replace(/^\[|\]$/g, "")
-      .split(",")
-      .map((group) => group.trim().replace(/^"|"$/g, ""))
-      .filter(Boolean);
-  }
-  return [];
-}
-
 type AuthContextValue = {
-  user: AuthUser | null;
-  loading: boolean;
-  configured: boolean;
-  missingConfig: string[];
+  user: AuthUser | null; loading: boolean; configured: boolean; missingConfig: string[];
   login: (email: string, password: string) => Promise<void>;
-  register: (
-    fullName: string,
-    email: string,
-    password: string
-  ) => Promise<boolean>;
+  register: (fullName: string, email: string, password: string) => Promise<boolean>;
   confirm: (email: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
 };
-
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-async function readCurrentUser(): Promise<AuthUser | null> {
-  try {
-    const [currentUser, session] = await Promise.all([
-      getCurrentUser(),
-      fetchAuthSession(),
-    ]);
-    const claims = session.tokens?.idToken?.payload;
-    const accessClaims = session.tokens?.accessToken?.payload;
-    const groupsClaim =
-      accessClaims?.["cognito:groups"] || claims?.["cognito:groups"];
-    const groups = readGroups(groupsClaim);
-
-    return {
-      userId: currentUser.userId,
-      username: currentUser.username,
-      email: String(claims?.email || currentUser.username),
-      groups,
-      isAdmin: hasAdminGroup(groups),
-    };
-  } catch {
-    return null;
-  }
-}
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const configured = Boolean(userPoolId && userPoolClientId);
+function client() { if (!supabase) throw new Error("Sign-in is temporarily unavailable."); return supabase; }
+export function AuthProvider({children}: {children: ReactNode}) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
+  const [loading, setLoading] = useState(Boolean(supabase));
   const refreshUser = useCallback(async () => {
-    const currentUser = configured ? await readCurrentUser() : null;
-    setUser(currentUser);
-    setLoading(false);
-  }, [configured]);
-
+    const {data, error} = await client().auth.getUser();
+    if (error) throw error;
+    setUser(authUser(data.user));
+  }, []);
   useEffect(() => {
-    let cancelled = false;
-    const currentUser = configured ? readCurrentUser() : Promise.resolve(null);
-    currentUser.then((result) => {
-      if (cancelled) return;
-      setUser(result);
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [configured]);
-
-  const value = useMemo<AuthContextValue>(
-    () => ({
-      user,
-      loading,
-      configured,
-      missingConfig,
-      login: async (email, password) => {
-        const result = await signIn({ username: email, password });
-        if (!result.isSignedIn) {
-          throw new Error("Additional sign-in confirmation is required.");
-        }
-        await refreshUser();
-      },
-      register: async (fullName, email, password) => {
-        const result = await signUp({
-          username: email,
-          password,
-          options: {
-            userAttributes: {
-              email,
-              name: fullName.trim(),
-            },
-          },
-        });
-        if (result.isSignUpComplete) await refreshUser();
-        return result.isSignUpComplete;
-      },
-      confirm: async (email, code) => {
-        const result = await confirmSignUp({
-          username: email,
-          confirmationCode: code,
-        });
-        if (!result.isSignUpComplete) {
-          throw new Error("Account confirmation is not complete.");
-        }
-      },
-      logout: async () => {
-        await signOut();
-        setUser(null);
-      },
-    }),
-    [configured, loading, refreshUser, user]
-  );
-
+    if (!supabase) return;
+    let active = true;
+    supabase.auth.getSession().then(({data}) => { if (active) { setUser(authUser(data.session?.user || null)); setLoading(false); } });
+    const {data} = supabase.auth.onAuthStateChange((_event, session) => { setUser(authUser(session?.user || null)); setLoading(false); });
+    return () => { active = false; data.subscription.unsubscribe(); };
+  }, []);
+  const value = useMemo<AuthContextValue>(() => ({
+    user, loading, configured: Boolean(supabase), missingConfig,
+    login: async (email, password) => { const {error} = await client().auth.signInWithPassword({email, password}); if (error) throw error; await refreshUser(); },
+    register: async (fullName, email, password) => {
+      const {data, error} = await client().auth.signUp({email, password, options: {data: {name: fullName.trim()}, emailRedirectTo: window.location.origin}});
+      if (error) throw error;
+      if (data.session) await refreshUser();
+      return Boolean(data.session);
+    },
+    confirm: async (email, code) => { const {error} = await client().auth.verifyOtp({email, token: code, type: "email"}); if (error) throw error; await refreshUser(); },
+    logout: async () => { const {error} = await client().auth.signOut(); if (error) throw error; setUser(null); },
+  }), [user, loading, refreshUser]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-
-export function useAuth() {
-  const value = useContext(AuthContext);
-  if (!value) throw new Error("useAuth must be used inside AuthProvider.");
-  return value;
-}
-
-export async function getAccessToken() {
-  const session = await fetchAuthSession();
-  return session.tokens?.accessToken?.toString() || null;
-}
+export function useAuth() { const value = useContext(AuthContext); if (!value) throw new Error("useAuth must be used inside AuthProvider."); return value; }
+export async function getAccessToken() { if (!supabase) return null; const {data, error} = await supabase.auth.getSession(); if (error) throw error; return data.session?.access_token || null; }

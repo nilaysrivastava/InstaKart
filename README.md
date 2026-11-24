@@ -1,349 +1,135 @@
 <div align="center">
-  <img src="frontend/public/logo.png" alt="InstaKart logo" width="150" />
+  <img src="frontend/public/logo.png" alt="InstaKart" width="150" />
 
-  # InstaKart
+# InstaKart
 
-  **Situation-aware quick commerce, powered by Amazon Bedrock**
+Situation-aware quick commerce on Render and Supabase.
 
-  Describe the moment. Review a smart cart. Get essentials delivered fast.
-
-  [![Next.js](https://img.shields.io/badge/Next.js-16-111827?logo=nextdotjs)](https://nextjs.org/)
-  [![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
-  [![AWS](https://img.shields.io/badge/AWS-Serverless-FF9900?logo=amazonwebservices&logoColor=white)](https://aws.amazon.com/)
-  [![Amazon Bedrock](https://img.shields.io/badge/Amazon-Bedrock-7C3AED)](https://aws.amazon.com/bedrock/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-
-  [Live App](https://main.dcvcdyghn1yjx.amplifyapp.com)
+Describe the moment. Compare three suggested carts. Check out essentials.
 </div>
 
----
+## Experience
 
-## What is InstaKart?
+- Text and browser voice input for situation-aware shopping.
+- Fastest, Best Value, and Most Complete carts from live inventory.
+- Email/password accounts, profile, persistent private carts, order history and tracking.
+- Administrator inventory management, stock controls, analytics and business insights.
+- Atomic checkout: locked stock validation, canonical catalog prices and order creation in one Postgres transaction.
 
-InstaKart is an AI-powered quick-commerce platform built around a new shopping experience: **turning natural language needs into checkout-ready carts**.
+The free deployment uses the built-in keyword/context planner. It supports explicit budgets and people counts without an external model account. Generative interpretation, generated tips and model-based insights can be enabled later with an OpenAI-compatible provider. This version has **no AWS runtime dependencies**.
 
-Most ecommerce apps are product-first. Users search for each item manually, compare options, add products one by one, and build the cart themselves.
-
-InstaKart is **situation-first**.
-
-A user can simply say:
-
-> “Guests are coming in 30 minutes.”  
-> “I have a fever and need essentials fast.”  
-> “Plan a quick breakfast for 4 people.”  
-> “I need last-minute hostel snacks under ₹500.”
-
-InstaKart understands the intent behind the request, detects urgency, estimates quantity, considers budget, checks inventory availability, compares delivery time, and generates a structured cart instantly.
-
-The key innovation is the **natural-language-to-cart pipeline**: instead of making users search for products, InstaKart lets users describe the situation, and the system builds the cart intelligently.
-
-Beyond cart generation, InstaKart includes a complete ecommerce workflow with user authentication, personalized carts, order history, profile management, admin inventory controls, stock tracking, out-of-stock handling, and business analytics.
-
-InstaKart combines AI reasoning with real ecommerce operations, making the shopping flow faster, more contextual, and more human than traditional search-based commerce.
-
-<div align="center">
-  <img src="frontend/src/app/og-image.png" alt="InstaKart smart cart experience" width="820" />
-</div>
-
-## Highlights
-
-| Experience | What it provides |
-|---|---|
-| 🧠 Situation-first shopping | Converts natural-language needs into relevant product bundles |
-| ⚡ Smart cart modes | Fastest, Best Value, and Most Complete recommendations |
-| 🎙️ Voice and text input | Lets customers describe urgent needs naturally |
-| 🛒 Account-scoped commerce | Private carts, checkout, and order history per Cognito user |
-| 📦 Live inventory | Quantity, availability, ETA, low-stock, and out-of-stock behavior |
-| 🔐 Role-based access | Cognito `admin` group separates customer and administrator experiences |
-| 📊 Business dashboard | Real inventory/order metrics, responsive charts, and revenue analytics |
-| ✨ AI business insights | Bedrock insights with a deterministic fallback when AI is unavailable |
-
-## Product surfaces
-
-| Route | Audience | Purpose |
-|---|---|---|
-| `/` | Guest / customer | Browse products and generate situation-aware carts |
-| `/admin` | Admin | Business metrics, charts, revenue trends, and AI insights |
-| `/admin/inventory` | Admin | Search, filter, add, edit, restock, disable, or delete products |
-
-Guests can browse and generate recommendations. Cart, checkout, profile, and
-order actions require authentication.
+Order placement and time-based delivery tracking are prototype workflows; the app does not charge cards or dispatch real deliveries.
 
 ## Architecture
 
-<div align="center">
-  <img
-    src="frontend/public/architecture.svg"
-    alt="InstaKart architecture: Next.js, Cognito, API Gateway, Lambda, DynamoDB, and Amazon Bedrock"
-    width="100%"
-  />
-</div>
+![Architecture](frontend/public/architecture.svg)
 
-| Layer | Technology | Responsibility |
-|---|---|---|
-| Web app | Next.js 16, React 19, TypeScript | Storefront, auth UX, cart, orders, and admin UI |
-| Styling | Tailwind CSS 4 | Responsive InstaKart design system |
-| Charts | Recharts | Admin inventory and revenue visualization |
-| Authentication | Amazon Cognito + AWS Amplify | Sessions, sign-up/sign-in, and group claims |
-| API | API Gateway HTTP API | CORS, routing, and JWT authorization |
-| Compute | AWS Lambda, Node.js 20 | Commerce logic, AI orchestration, and authorization |
-| Database | Amazon DynamoDB | Products, inventory, carts, orders, plans, and feedback |
-| AI | Amazon Nova + Titan Embeddings | Intent extraction, retrieval, planning, and insights |
-| Deployment | AWS Amplify + Serverless Framework | Frontend and backend delivery |
+| Component | Service |
+| --- | --- |
+| Storefront and administration | Next.js 16, React 19, Tailwind, Recharts |
+| Frontend and API host | One Render Free Node.js web service |
+| Authentication | Supabase Auth, email/password |
+| Persistent storage | Supabase Postgres, `commerce_entities` JSON documents |
+| Authorization | Server-verified Supabase users; admin role in trusted `app_metadata.groups` |
+| Planning | Built-in inventory planner; optional OpenAI-compatible model |
 
-## AI recommendation pipeline
+The browser calls the same-origin `/api` endpoints. The server forwards each verified user session to Supabase. Row-level policies allow public catalog reads, private owner records and administrator inventory actions. Checkout calls a private transactional function that verifies `auth.uid()` and order ownership. Render needs only a publishable key; no Supabase service-role secret is used.
 
-```text
-Customer situation
-        ↓
-Intent and urgency extraction
-        ↓
-Titan semantic retrieval + lexical fallback
-        ↓
-Nova cart planning
-        ↓
-Usefulness verification and reranking
-        ↓
-Fastest / Best Value / Most Complete carts
-```
+## Local development
 
-Unavailable products and products with zero quantity are excluded from AI
-inventory candidates. If the planner fails or exceeds its response budget, the
-backend creates a deterministic cart from the same live inventory.
+Use Node.js 22.13 or newer within the 22.x line.
 
-## Authentication and authorization
-
-InstaKart uses one Cognito User Pool for customers and admins.
-
-| User state | Navigation and access |
-|---|---|
-| Guest | Login, Sign up, catalog browsing, and guest AI planning |
-| Customer | Cart, My Orders, Profile, checkout, and personalized planning |
-| Admin (`admin` group) | Dashboard, Inventory, and Logout only |
-
-Security is enforced in Lambda as well as the UI:
-
-- User identity comes from the verified Cognito `sub` claim.
-- Cart and order APIs never trust a frontend `userId`.
-- Admin APIs require `cognito:groups` to include `admin`.
-- Local protected routes independently verify Cognito token signatures.
-- Checkout validates current inventory and uses conditional DynamoDB writes.
-
-### Create an admin
-
-```bash
-aws cognito-idp create-group \
-  --user-pool-id YOUR_USER_POOL_ID \
-  --group-name admin \
-  --region ap-south-1
-
-aws cognito-idp admin-add-user-to-group \
-  --user-pool-id YOUR_USER_POOL_ID \
-  --username USERNAME_OR_EMAIL \
-  --group-name admin \
-  --region ap-south-1
-```
-
-The user must **log out and sign in again** after assignment so Cognito issues
-fresh tokens containing the group claim.
-
-## Inventory behavior
-
-| Inventory state | Customer behavior | AI behavior |
-|---|---|---|
-| `quantity >= 5` and enabled | Purchasable | Eligible |
-| `quantity` from `1` to `4` | “Only X left” | Eligible |
-| `quantity = 0` | “Out of stock”; Add disabled | Excluded |
-| `isAvailable = false` | Unavailable even with stock | Excluded |
-
-Legacy products without an explicit quantity use a migration-safe quantity of
-`100` until an administrator saves a value.
-
-## Getting started
-
-### Prerequisites
-
-- Node.js 20+
-- npm
-- AWS credentials with access to DynamoDB and Bedrock
-- A Cognito User Pool and public app client
-- Serverless Framework dependencies installed through `npm install`
-
-### 1. Install dependencies
-
-```bash
-git clone https://github.com/nilaysrivastava/hackon6-amazon-prototype.git
-cd hackon6-amazon-prototype
-
-cd frontend && npm install
-cd ../backend && npm install
-```
-
-### 2. Configure environment variables
-
-Frontend:
-
-```bash
+```sh
+git clone https://github.com/nilaysrivastava/InstaKart.git
+cd InstaKart
+npm ci --prefix frontend
+npm ci --prefix backend
 cp frontend/.env.example frontend/.env.local
+# Fill in the Supabase URL and publishable key.
+npm run dev
 ```
+
+Open [localhost:3000](http://localhost:3000). Run from the repository root so the custom server serves both the Next.js pages and commerce API.
+
+For a fresh Supabase project, apply `backend/sql/schema.sql` and run the idempotent catalog seeder with an administrator access token and the public project configuration set:
+
+```sh
+SUPABASE_URL=... SUPABASE_PUBLISHABLE_KEY=... SUPABASE_ACCESS_TOKEN=... npm run seed --prefix backend
+```
+
+Existing products, administrator edits and stock levels are preserved by the seeder. The repository's 233 seed products start with quantity 100 unless otherwise specified. This deployment starts with a fresh catalog: historical AWS users/orders are not imported without access to the old services or an export.
+
+## Render deployment
+
+Use a **Free** Node web service with the repository root as its working directory:
+
+| Setting | Value |
+| --- | --- |
+| Build | `npm run build` |
+| Start | `npm start` |
+| Health check | `/health` |
+| Node | `22.x` |
+| Region | Singapore |
+
+Set these variables before building:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:3001
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-south-1_xxxxxxxxx
-NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=your_public_app_client_id
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
+NEXT_PUBLIC_API_BASE_URL=/api
+NODE_VERSION=22
 ```
 
-Backend variables:
+Never put a secret key in a `NEXT_PUBLIC_` variable or a committed file. Public variables are compiled into browser code; changing them requires a rebuild.
 
-```env
-AWS_REGION=ap-south-1
-ITEMS_TABLE=hackon6-items-dev
-COGNITO_USER_POOL_ID=ap-south-1_xxxxxxxxx
-COGNITO_USER_POOL_CLIENT_ID=your_public_app_client_id
+In Supabase Auth, set the Site URL to the Render URL. Add the same URL and `http://localhost:3000` to the redirect allowlist. The sign-up dialog supports email OTP verification; configure the Confirm signup email template to include `{{ .Token }}`, or use the confirmation link and then sign in. Supabase's default email sender is restricted; configure a custom SMTP provider for unrestricted public signups.
+
+### Administrators
+
+Create a normal account, then use the Supabase Dashboard user editor or a server-only Auth Admin client to set:
+
+```json
+{"groups":["admin"]}
 ```
 
-See [`frontend/.env.example`](frontend/.env.example) and
-[`backend/.env.example`](backend/.env.example) for the maintained templates.
+Set this in **app metadata**, never user metadata. Sign out and back in after assignment. Customers cannot grant themselves admin access. The backend verifies the current user with Supabase on every protected request.
 
-### 3. Run locally
+### Optional generative AI
 
-Terminal 1 — backend:
+Set `AI_API_KEY`, `AI_BASE_URL` (an OpenAI-compatible API base), and `AI_MODEL` in Render, then redeploy. No key is needed for the built-in planner. Provider availability, free quotas and model names depend on your provider account. On provider failure the app falls back to inventory planning and rule-based insights.
 
-```bash
-cd backend
-source ../frontend/.env.local
+## Routes and API
 
-COGNITO_USER_POOL_ID="$NEXT_PUBLIC_COGNITO_USER_POOL_ID" \
-COGNITO_USER_POOL_CLIENT_ID="$NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID" \
-npx serverless offline start \
-  --host 127.0.0.1 \
-  --httpPort 3001 \
-  --ignoreJWTSignature
+Pages: `/`, `/admin`, `/admin/inventory`.
+
+| API route | Access |
+| --- | --- |
+| `GET /health`, `GET /api/health` | Public |
+| `GET /api/now/products`, `POST /api/now/plan/guest` | Public |
+| `POST /api/now/plan` | Customer |
+| `GET/PUT/DELETE /api/now/cart` | Customer |
+| `POST /api/now/checkout` | Customer |
+| `GET /api/now/orders`, `GET /api/now/orders/{id}/track` | Owner |
+| `POST /api/now/feedback` | Customer |
+| `GET/POST /api/admin/inventory` | Admin |
+| `PATCH/DELETE /api/admin/inventory/{id}` | Admin |
+| `GET /api/admin/analytics`, `POST /api/admin/analytics/insights` | Admin |
+| `/api/items`, `/api/ask`, `/api/now/seed`, `/api/now/embed-products` | Admin maintenance |
+
+The legacy image-plan client helper had no corresponding backend route in the original app; image-based planning is not implemented.
+
+## Validation
+
+```sh
+npm test --prefix backend
+npm run lint --prefix frontend
+npm run build --prefix frontend
+npm audit --prefix frontend
+npm audit --prefix backend
 ```
 
-The offline gateway decodes the token for routing; Lambda independently
-verifies its Cognito signature before protected data is accessed.
+The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Live account isolation and UI checks use disposable test accounts.
 
-Terminal 2 — frontend:
+## Free-plan operation
 
-```bash
-cd frontend
-npm run dev -- --hostname 127.0.0.1 --port 3000
-```
-
-Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
-
-> Do not use `--noAuth` while working with real carts, orders, inventory, or
-> admin APIs. It removes the identity boundary needed by those routes.
-
-## API reference
-
-<details>
-<summary><strong>Public and customer APIs</strong></summary>
-
-| Method | Endpoint | Access | Purpose |
-|---|---|---|---|
-| `GET` | `/health` | Public | Service health |
-| `GET` | `/now/products` | Public | Customer product catalog |
-| `POST` | `/now/plan/guest` | Public | Anonymous, non-persisted AI cart |
-| `POST` | `/now/plan` | Customer | Authenticated AI cart with user memory |
-| `GET` | `/now/cart` | Customer | Load the signed-in user’s cart |
-| `PUT` | `/now/cart` | Customer | Save the signed-in user’s cart |
-| `DELETE` | `/now/cart` | Customer | Clear the signed-in user’s cart |
-| `POST` | `/now/checkout` | Customer | Validate inventory and create an order |
-| `GET` | `/now/orders` | Customer | List only the signed-in user’s orders |
-| `GET` | `/now/orders/{orderId}/track` | Customer | Track an owned order |
-| `POST` | `/now/feedback` | Customer | Save recommendation feedback |
-
-</details>
-
-<details>
-<summary><strong>Admin APIs</strong></summary>
-
-All routes require a verified Cognito token with membership in `admin`.
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/admin/inventory` | List full inventory |
-| `POST` | `/admin/inventory` | Create a product |
-| `PATCH` | `/admin/inventory/{id}` | Update details, quantity, or availability |
-| `DELETE` | `/admin/inventory/{id}` | Delete a product |
-| `GET` | `/admin/analytics` | Aggregate inventory and order metrics |
-| `POST` | `/admin/analytics/insights` | Generate Bedrock or rule-based insights |
-
-Bedrock receives aggregate business metrics only—not emails, Cognito IDs,
-customer prompts, or raw order records.
-
-</details>
-
-<details>
-<summary><strong>Development and maintenance APIs</strong></summary>
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `POST` | `/ask` | Bedrock connectivity check |
-| `POST` | `/now/seed` | Catalog seeding guidance |
-| `POST` | `/now/embed-products` | Generate missing product embeddings |
-| `GET/POST` | `/items` | Development item endpoints |
-
-</details>
-
-## DynamoDB entity model
-
-The prototype uses a single-table design.
-
-| Entity | Primary identifier | Important attributes |
-|---|---|---|
-| Product | `prod_*` | category, price, quantity, availability, ETA, tags, embedding |
-| Cart | `cart_<user-sub>` | userId, items, updatedAt |
-| Order | `order_*` | userId, selected mode, plan, status, createdAt |
-| Shopping plan | `plan_*` | userId, request, generated plan, model metadata |
-| Feedback | `feedback_*` | userId, action, product and plan signals |
-
-Global secondary indexes support product and user-entity queries.
-
-## Useful commands
-
-| Command | Directory | Purpose |
-|---|---|---|
-| `npm run dev` | `frontend` | Start Next.js development mode |
-| `npm run lint` | `frontend` | Run ESLint |
-| `npm run build` | `frontend` | Create a production build |
-| `node --check src/handler.js` | `backend` | Validate Lambda syntax |
-| `npx serverless print` | `backend` | Resolve and inspect deployment configuration |
-| `npx serverless deploy` | `backend` | Deploy API Gateway and Lambda |
-
-## Verification checklist
-
-- Guest can browse and generate a cart.
-- Protected actions open the shared Cognito login/sign-up modal.
-- Cart and orders remain isolated between two customer accounts.
-- Admin membership redirects to `/admin`.
-- Customer tokens receive `403` from admin APIs.
-- Quantity `0` disables customer purchase and removes the product from AI candidates.
-- Admin inventory updates appear in the customer catalog.
-- AI insights fall back safely when Bedrock is unavailable.
-
-## Repository structure
-
-```text
-.
-├── backend/
-│   ├── data/                 # Seed catalog
-│   ├── scripts/              # Catalog maintenance scripts
-│   ├── src/handler.js        # Lambda handlers and business logic
-│   └── serverless.yml        # API Gateway, IAM, and Lambda configuration
-├── frontend/
-│   ├── public/               # Brand and public assets
-│   └── src/
-│       ├── app/              # Customer and admin routes
-│       ├── components/       # Storefront, cart, auth, and order UI
-│       └── lib/              # Auth, API types, and shared helpers
-└── README.md
-```
-
----
-
-<div align="center">
-  <strong>Built with 🧡 for fast decisions when the situation matters.</strong>
-</div>
+Render Free services sleep after 15 minutes idle and can take about a minute to wake up. Free hours are shared across your workspace's web services. Supabase Free projects may pause after inactivity. No paid database, worker, persistent disk or AI service is required. Usage is subject to each provider's included limits; see [Render Free](https://render.com/docs/free) and [Supabase pricing](https://supabase.com/pricing).

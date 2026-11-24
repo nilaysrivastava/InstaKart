@@ -1,39 +1,11 @@
 const { randomUUID } = require("crypto");
-const { CognitoJwtVerifier } = require("aws-jwt-verify");
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const {
-  DynamoDBDocumentClient,
-  DeleteCommand,
-  GetCommand,
-  PutCommand,
-  ScanCommand,
-  QueryCommand,
-  TransactWriteCommand,
-} = require("@aws-sdk/lib-dynamodb");
-const {
-  BedrockRuntimeClient,
-  ConverseCommand,
-  InvokeModelCommand,
-} = require("@aws-sdk/client-bedrock-runtime");
-
-const AWS_REGION = process.env.AWS_REGION || "ap-south-1";
-const ITEMS_TABLE = process.env.ITEMS_TABLE || "hackon6-items-dev";
-const BEDROCK_REGION = process.env.BEDROCK_REGION || "us-east-1";
-const BEDROCK_PLANNER_MODEL_ID =
-  process.env.BEDROCK_PLANNER_MODEL_ID || "amazon.nova-pro-v1:0";
-const BEDROCK_FALLBACK_MODEL_ID =
-  process.env.BEDROCK_FALLBACK_MODEL_ID ||
-  process.env.BEDROCK_FAST_MODEL_ID ||
-  "amazon.nova-micro-v1:0";
-const BEDROCK_FAST_MODEL_ID =
-  process.env.BEDROCK_FAST_MODEL_ID || "amazon.nova-micro-v1:0";
-const BEDROCK_EMBEDDING_MODEL_ID =
-  process.env.BEDROCK_EMBEDDING_MODEL_ID || "amazon.titan-embed-text-v2:0";
-const ENABLE_EMBEDDING_RANKING =
-  process.env.ENABLE_EMBEDDING_RANKING !== "false";
-const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID || "";
-const COGNITO_USER_POOL_CLIENT_ID =
-  process.env.COGNITO_USER_POOL_CLIENT_ID || "";
+const { getClient, docClient, DeleteCommand, GetCommand, PutCommand, ScanCommand, QueryCommand, TransactWriteCommand } = require("./storage");
+const { complete } = require("./ai");
+const ITEMS_TABLE = "commerce_entities";
+const AI_PLANNER_MODEL_ID = process.env.AI_MODEL || "built-in-inventory-planner";
+const AI_FALLBACK_MODEL_ID = AI_PLANNER_MODEL_ID;
+const AI_FAST_MODEL_ID = AI_PLANNER_MODEL_ID;
+const ENABLE_EMBEDDING_RANKING = false;
 
 const PRODUCT_INDEX_NAME = "EntityTypeAisleIndex";
 const USER_INDEX_NAME = "UserCreatedAtIndex";
@@ -41,10 +13,6 @@ const INVENTORY_CACHE_TTL_MS = Number(
   process.env.INVENTORY_CACHE_TTL_MS || 5000
 );
 const PLANNER_TIMEOUT_MS = Number(process.env.PLANNER_TIMEOUT_MS || 18000);
-
-const dynamoClient = new DynamoDBClient({ region: AWS_REGION });
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const bedrockClient = new BedrockRuntimeClient({ region: BEDROCK_REGION });
 
 let inventoryCache = {
   items: null,
@@ -69,45 +37,14 @@ const parseBody = (event) => {
   }
 };
 
-const localCognitoVerifier =
-  COGNITO_USER_POOL_ID && COGNITO_USER_POOL_CLIENT_ID
-    ? CognitoJwtVerifier.create({
-        userPoolId: COGNITO_USER_POOL_ID,
-        tokenUse: "access",
-        clientId: COGNITO_USER_POOL_CLIENT_ID,
-      })
-    : null;
-
 const getAuthenticatedUser = async (event) => {
-  let claims = event.requestContext?.authorizer?.jwt?.claims;
-
-  if (process.env.IS_OFFLINE) {
-    const authorization =
-      event.headers?.authorization || event.headers?.Authorization || "";
-    const token = authorization.startsWith("Bearer ")
-      ? authorization.slice(7)
-      : "";
-
-    if (!token || !localCognitoVerifier) return null;
-
-    try {
-      claims = await localCognitoVerifier.verify(token);
-    } catch (error) {
-      console.warn("Local Cognito token verification failed:", error.message);
-      return null;
-    }
-  }
-
-  const userId = claims?.sub;
-
-  if (!userId) return null;
-
-  return {
-    userId,
-    email: claims.email || "",
-    username: claims["cognito:username"] || claims.username || "",
-    groups: getCognitoGroups(claims),
-  };
+  const authorization = event.headers?.authorization || event.headers?.Authorization || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (!token) return null;
+  const {data, error} = await getClient().auth.getUser(token);
+  if (error || !data.user) return null;
+  const user = data.user;
+  return {userId: user.id, email: user.email || "", username: user.email || "", groups: Array.isArray(user.app_metadata?.groups) ? user.app_metadata.groups : []};
 };
 
 const unauthorizedResponse = () =>
@@ -115,19 +52,6 @@ const unauthorizedResponse = () =>
     success: false,
     message: "Sign in is required.",
   });
-
-const getCognitoGroups = (claims = {}) => {
-  const groups = claims["cognito:groups"];
-  if (Array.isArray(groups)) return groups.map(String);
-  if (typeof groups === "string") {
-    return groups
-      .replace(/^\[|\]$/g, "")
-      .split(",")
-      .map((group) => group.trim().replace(/^"|"$/g, ""))
-      .filter(Boolean);
-  }
-  return [];
-};
 
 const getAdminUser = async (event) => {
   const user = await getAuthenticatedUser(event);
@@ -208,7 +132,7 @@ const extractJsonFromText = (text = "") => {
   const lastBrace = cleaned.lastIndexOf("}");
 
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error("Bedrock did not return a JSON object.");
+    throw new Error("model provider did not return a JSON object.");
   }
 
   return cleaned.slice(firstBrace, lastBrace + 1);
@@ -219,45 +143,15 @@ const parseJsonObjectFromText = (text = "") => {
   const parsed = JSON.parse(jsonText);
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("Bedrock JSON was not an object.");
+    throw new Error("model provider JSON was not an object.");
   }
 
   return parsed;
 };
 
-const callBedrockConverse = async ({
-  prompt,
-  modelId = BEDROCK_PLANNER_MODEL_ID,
-  maxTokens = 650,
-  temperature = 0.12,
-  topP = 0.65,
-}) => {
-  const command = new ConverseCommand({
-    modelId,
-    messages: [
-      {
-        role: "user",
-        content: [{ text: prompt }],
-      },
-    ],
-    inferenceConfig: {
-      maxTokens,
-      temperature,
-      topP,
-    },
-  });
+const callModel = (options) => complete(options);
 
-  const response = await bedrockClient.send(command);
 
-  return (
-    response.output?.message?.content
-      ?.map((block) => block.text || "")
-      .join("")
-      .trim() || ""
-  );
-};
-
-const embeddingCache = new Map();
 
 const buildProductEmbeddingText = (product = {}) => {
   return [
@@ -275,53 +169,7 @@ const buildProductEmbeddingText = (product = {}) => {
     .slice(0, 1500);
 };
 
-const decodeBedrockBody = (body) => {
-  if (!body) return "{}";
-  if (typeof body.transformToString === "function") {
-    return body.transformToString();
-  }
-  return Buffer.from(body).toString("utf8");
-};
-
-const generateEmbedding = async (text) => {
-  const inputText = safeString(text).slice(0, 2000);
-  if (!inputText) return null;
-
-  const cacheKey = inputText.toLowerCase();
-  if (embeddingCache.has(cacheKey)) return embeddingCache.get(cacheKey);
-
-  const response = await bedrockClient.send(
-    new InvokeModelCommand({
-      modelId: BEDROCK_EMBEDDING_MODEL_ID,
-      contentType: "application/json",
-      accept: "application/json",
-      body: JSON.stringify({
-        inputText,
-        dimensions: 512,
-        normalize: true,
-      }),
-    })
-  );
-
-  const rawBody = await decodeBedrockBody(response.body);
-  const parsed = JSON.parse(rawBody);
-  const embedding = parsed.embedding || parsed.embeddings?.[0];
-
-  if (!Array.isArray(embedding) || !embedding.length) {
-    throw new Error(
-      "Titan embedding response did not include an embedding array."
-    );
-  }
-
-  embeddingCache.set(cacheKey, embedding);
-
-  if (embeddingCache.size > 100) {
-    const firstKey = embeddingCache.keys().next().value;
-    embeddingCache.delete(firstKey);
-  }
-
-  return embedding;
-};
+const generateEmbedding = async () => null;
 
 const cosineSimilarity = (a = [], b = []) => {
   const length = Math.min(a.length, b.length);
@@ -388,33 +236,33 @@ const callPlannerWithFallback = async ({
   const startedAt = Date.now();
 
   try {
-    console.log("Calling planner model:", BEDROCK_PLANNER_MODEL_ID);
+    console.log("Calling planner model:", AI_PLANNER_MODEL_ID);
 
-    const text = await callBedrockConverse({
+    const text = await callModel({
       prompt,
-      modelId: BEDROCK_PLANNER_MODEL_ID,
+      modelId: AI_PLANNER_MODEL_ID,
       maxTokens,
       temperature,
       topP,
     });
 
     console.log("Planner model completed:", {
-      modelId: BEDROCK_PLANNER_MODEL_ID,
+      modelId: AI_PLANNER_MODEL_ID,
       durationMs: Date.now() - startedAt,
       outputChars: text.length,
     });
 
     return {
       text,
-      modelId: BEDROCK_PLANNER_MODEL_ID,
+      modelId: AI_PLANNER_MODEL_ID,
       usedFallback: false,
     };
   } catch (error) {
     const durationMs = Date.now() - startedAt;
 
-    if (BEDROCK_FALLBACK_MODEL_ID === BEDROCK_PLANNER_MODEL_ID) {
+    if (AI_FALLBACK_MODEL_ID === AI_PLANNER_MODEL_ID) {
       console.error("Planner model failed and fallback model is identical:", {
-        modelId: BEDROCK_PLANNER_MODEL_ID,
+        modelId: AI_PLANNER_MODEL_ID,
         message: error.message,
         durationMs,
       });
@@ -422,30 +270,30 @@ const callPlannerWithFallback = async ({
     }
 
     console.error("Planner model failed, using fallback model:", {
-      plannerModelId: BEDROCK_PLANNER_MODEL_ID,
-      fallbackModelId: BEDROCK_FALLBACK_MODEL_ID,
+      plannerModelId: AI_PLANNER_MODEL_ID,
+      fallbackModelId: AI_FALLBACK_MODEL_ID,
       message: error.message,
       durationMs,
     });
 
     const fallbackStartedAt = Date.now();
-    const text = await callBedrockConverse({
+    const text = await callModel({
       prompt,
-      modelId: BEDROCK_FALLBACK_MODEL_ID,
+      modelId: AI_FALLBACK_MODEL_ID,
       maxTokens,
       temperature,
       topP,
     });
 
     console.log("Fallback model completed:", {
-      modelId: BEDROCK_FALLBACK_MODEL_ID,
+      modelId: AI_FALLBACK_MODEL_ID,
       durationMs: Date.now() - fallbackStartedAt,
       outputChars: text.length,
     });
 
     return {
       text,
-      modelId: BEDROCK_FALLBACK_MODEL_ID,
+      modelId: AI_FALLBACK_MODEL_ID,
       usedFallback: true,
     };
   }
@@ -885,14 +733,14 @@ const extractShoppingIntent = async ({
   panicMode,
 }) => {
   try {
-    const text = await callBedrockConverse({
+    const text = await callModel({
       prompt: buildShoppingIntentPrompt({
         userRequest,
         budgetMode,
         decisionMode,
         panicMode,
       }),
-      modelId: BEDROCK_PLANNER_MODEL_ID,
+      modelId: AI_PLANNER_MODEL_ID,
       maxTokens: 360,
       temperature: 0.05,
       topP: 0.5,
@@ -1010,6 +858,11 @@ const genericProductScore = ({
   const price = priceFitScore(product, budgetMode);
   const verifier =
     verifierScore == null ? null : clampNumber(verifierScore / 100, 0, 1, 0);
+
+  if (!ENABLE_EMBEDDING_RANKING && verifier == null) {
+    const matched = clampNumber(lexicalScoreProduct(product, expandSearchTokensForNeed(userRequest)) / 35, 0, 1, 0);
+    return Math.round((matched * 0.9 + eta * 0.05 + price * 0.05) * 100 + reasonBoost);
+  }
 
   if (verifier != null) {
     return Math.round(
@@ -1320,7 +1173,7 @@ const verifyAndRerankProducts = async ({
   }
 
   try {
-    const verifierText = await callBedrockConverse({
+    const verifierText = await callModel({
       prompt: buildVerifierPrompt({
         userRequest,
         budgetMode,
@@ -1332,7 +1185,7 @@ const verifyAndRerankProducts = async ({
         shoppingIntentContext,
         userMemory,
       }),
-      modelId: BEDROCK_PLANNER_MODEL_ID,
+      modelId: AI_PLANNER_MODEL_ID,
       maxTokens: 520,
       temperature: 0.05,
       topP: 0.5,
@@ -1668,9 +1521,9 @@ const getRelevantInventoryCandidates = async (
       limit
     );
     if (embeddedCandidates?.length) {
-      console.log("Candidate ranking used Titan embeddings:", {
+      console.log("Candidate ranking used semantic embeddings:", {
         candidateCount: embeddedCandidates.length,
-        modelId: BEDROCK_EMBEDDING_MODEL_ID,
+        modelId: "disabled",
       });
       return embeddedCandidates;
     }
@@ -1679,7 +1532,7 @@ const getRelevantInventoryCandidates = async (
       "Embedding candidate ranking skipped; using lexical fallback:",
       {
         message: error.message,
-        modelId: BEDROCK_EMBEDDING_MODEL_ID,
+        modelId: "disabled",
       }
     );
   }
@@ -2054,9 +1907,9 @@ JSON shape:
 `;
 
   try {
-    const text = await callBedrockConverse({
+    const text = await callModel({
       prompt,
-      modelId: BEDROCK_FAST_MODEL_ID,
+      modelId: AI_FAST_MODEL_ID,
       maxTokens: 360,
       temperature: 0.55,
       topP: 0.8,
@@ -2492,7 +2345,7 @@ JSON shape:
 }
 `;
 
-const generatePlanWithBedrock = async ({
+const generatePlanWithModel = async ({
   userRequest,
   budgetMode,
   decisionMode,
@@ -2583,7 +2436,7 @@ const inferFallbackNeedMetadata = (userRequest, panicMode) => {
       ? "User described a time-sensitive situation."
       : "User requested a useful quick-commerce plan.",
     aiExplanation:
-      "Selected the strongest direct matches from live inventory using semantic and lexical ranking.",
+      "Selected matching essentials from live inventory using catalog keywords and shopping context.",
     keywords: fallbackKeywords.length
       ? fallbackKeywords
       : normalizeTextForSearch(userRequest),
@@ -2640,6 +2493,10 @@ const buildDeterministicFallbackPlan = async ({
 }) => {
   const startedAt = Date.now();
   const metadata = inferFallbackNeedMetadata(userRequest, panicMode);
+  const peopleMatch = userRequest.match(/(?:for|serve|serving)\s+(\d+)\s*(?:people|persons|guests|friends)?/i);
+  const peopleCount = peopleMatch ? clampNumber(peopleMatch[1], 1, 30, 1) : 1;
+  const budgetMatch = userRequest.match(/(?:under|below|within|budget(?: of)?)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/i);
+  const budgetLimit = budgetMatch ? Number(budgetMatch[1]) : Infinity;
 
   const semanticCandidates = await getRelevantInventoryCandidates(
     userRequest,
@@ -2671,7 +2528,7 @@ const buildDeterministicFallbackPlan = async ({
     limit: 7,
   });
 
-  if (verifiedProducts.length < 2) return null;
+  if (!verifiedProducts.length) return null;
 
   const modeProductPool = buildModeProductPool({
     verifiedProducts,
@@ -2748,6 +2605,21 @@ const buildDeterministicFallbackPlan = async ({
     },
   };
 
+  for (const cart of Object.values(cartModes)) {
+    const kept = [];
+    let remaining = budgetLimit;
+    for (const item of cart.items) {
+      const product = inventory.find(p => p.id === item.productId);
+      const wanted = Math.min(getProductQuantity(product), Math.max(1, Math.ceil(peopleCount / 2)));
+      const affordable = item.price > 0 ? Math.floor(remaining / item.price) : wanted;
+      const quantity = Math.min(wanted, affordable);
+      if (quantity > 0) { kept.push({...item, quantity}); remaining -= item.price * quantity; }
+    }
+    cart.items = kept;
+    cart.etaMinutes = kept.length ? Math.max(...kept.map(item => item.etaMinutes)) : 0;
+  }
+  if (Object.values(cartModes).every(cart => !cart.items.length)) return null;
+
   const selectedMode = validDecisionMode(decisionMode || "mostComplete");
   const selectedCart = cartModes[selectedMode] || cartModes.mostComplete;
   const needGraph = buildNeedGraph({
@@ -2770,7 +2642,7 @@ const buildDeterministicFallbackPlan = async ({
     userRequest,
     needCategory: metadata.needCategory,
     urgencyLabel: panicMode ? "Critical" : "High",
-    peopleCount: 1,
+    peopleCount,
     cartModes,
     rawTips: [],
   });
@@ -2782,7 +2654,7 @@ const buildDeterministicFallbackPlan = async ({
     urgencyLabel: panicMode ? "Critical" : "High",
     urgencyScore: panicMode ? 92 : 78,
     urgencyReason: `${metadata.urgencyReason} Generated with resilient fallback because the AI planner was unavailable or exceeded the response budget.`,
-    peopleCount: 1,
+    peopleCount,
     timeContext: {
       timeOfDay: getTimeContext().timeOfDay,
       reason: "Fallback used explicit request and current time context.",
@@ -2827,7 +2699,7 @@ const buildDeterministicFallbackPlan = async ({
     },
     userId,
     generatedAt: new Date().toISOString(),
-    modelId: "semantic-fallback",
+    modelId: "built-in-inventory-planner",
     usedFallback: true,
   };
 };
@@ -2835,8 +2707,8 @@ const buildDeterministicFallbackPlan = async ({
 module.exports.health = async () =>
   jsonResponse(200, {
     success: true,
-    message: "HackOn 6.0 backend is healthy",
-    service: "hackon6-api",
+    message: "InstaKart backend is healthy",
+    service: "instakart-api",
     timestamp: new Date().toISOString(),
   });
 
@@ -2913,7 +2785,7 @@ module.exports.listItems = async () => {
   }
 };
 
-module.exports.askBedrock = async (event) => {
+module.exports.askModel = async (event) => {
   try {
     const body = parseBody(event);
     if (!body) {
@@ -2931,9 +2803,9 @@ module.exports.askBedrock = async (event) => {
       });
     }
 
-    const answer = await callBedrockConverse({
-      prompt: `You are an expert AWS solutions architect helping a hackathon team. Answer clearly, practically, and concisely.\n\nQuestion: ${question}`,
-      modelId: BEDROCK_FAST_MODEL_ID,
+    const answer = await callModel({
+      prompt: `You are a helpful shopping assistant. Answer clearly, practically, and concisely.\n\nQuestion: ${question}`,
+      modelId: AI_FAST_MODEL_ID,
       maxTokens: 500,
       temperature: 0.4,
       topP: 0.9,
@@ -2943,14 +2815,14 @@ module.exports.askBedrock = async (event) => {
       success: true,
       question,
       answer: answer || "No answer generated.",
-      modelId: BEDROCK_FAST_MODEL_ID,
+      modelId: AI_FAST_MODEL_ID,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("askBedrock error:", error);
+    console.error("askmodel provider error:", error);
     return jsonResponse(500, {
       success: false,
-      message: "Failed to get Bedrock answer",
+      message: "Failed to get model provider answer",
       error: error.message,
     });
   }
@@ -2960,7 +2832,7 @@ module.exports.seedNowInventory = async () =>
   jsonResponse(200, {
     success: true,
     message:
-      "Product catalog is managed in DynamoDB. Use backend/scripts/seed-products.js for controlled catalog seeding.",
+      "Product catalog is managed in Supabase Postgres. Use backend/scripts/seed-products.js for controlled catalog seeding.",
   });
 
 const handleGenerateNowPlan = async (event, { allowGuest = false } = {}) => {
@@ -3007,8 +2879,11 @@ const handleGenerateNowPlan = async (event, { allowGuest = false } = {}) => {
     let plan;
 
     try {
-      plan = await withTimeout(
-        generatePlanWithBedrock({
+      if (!process.env.AI_API_KEY) {
+        plan = await buildDeterministicFallbackPlan({userRequest: refinementContext?.originalRequest ? `${refinementContext.originalRequest}. ${refinementContext.instruction || userRequest}` : userRequest, budgetMode, decisionMode, panicMode, userId, inventory});
+        if (!plan) return jsonResponse(422, {success: false, message: "No matching cart fits this request and budget. Try naming essentials or increasing the budget."});
+      } else plan = await withTimeout(
+        generatePlanWithModel({
           userRequest,
           budgetMode,
           decisionMode,
@@ -3105,6 +2980,9 @@ module.exports.checkoutNowOrder = async (event) => {
       });
     }
 
+    if (checkoutItems.some(item => !Number.isSafeInteger(Number(item.quantity ?? 1)) || Number(item.quantity ?? 1) < 1 || Number(item.quantity ?? 1) > 10000)) {
+      return jsonResponse(400, {success: false, message: "Each quantity must be a positive whole number."});
+    }
     const inventory = await getInventory({ forceRefresh: true });
     const productsById = new Map(
       inventory.map((product) => [product.id, product])
@@ -3887,8 +3765,8 @@ module.exports.generateAdminInsights = async (event) => {
         topProducts: analytics.topProducts.slice(0, 5),
         topCategories: analytics.topCategories.slice(0, 5),
       };
-      const text = await callBedrockConverse({
-        modelId: BEDROCK_FAST_MODEL_ID,
+      const text = await callModel({
+        modelId: AI_FAST_MODEL_ID,
         maxTokens: 350,
         temperature: 0.2,
         topP: 0.7,
@@ -3901,7 +3779,7 @@ module.exports.generateAdminInsights = async (event) => {
           .map((insight) => insight.replace(/\$/g, "₹"))
           .filter(Boolean)
           .slice(0, 5);
-        source = "bedrock";
+        source = "model";
       }
     } catch (aiError) {
       console.warn("Admin insights AI fallback used:", aiError.message);
@@ -3923,65 +3801,9 @@ module.exports.generateAdminInsights = async (event) => {
   }
 };
 
-module.exports.embedProducts = async () => {
-  try {
-    const products = await queryProducts(300);
-    const unembedded = products.filter(
-      (product) =>
-        !Array.isArray(product.embedding) || !product.embedding.length
-    );
-
-    console.log(
-      `Embedding ${unembedded.length} products (${products.length - unembedded.length} already embedded).`
-    );
-
-    let embedded = 0;
-    let failed = 0;
-
-    for (const product of unembedded) {
-      try {
-        const embedding = await generateEmbedding(
-          buildProductEmbeddingText(product)
-        );
-        await docClient.send(
-          new PutCommand({
-            TableName: ITEMS_TABLE,
-            Item: {
-              ...product,
-              embedding,
-              embeddedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            },
-          })
-        );
-        embedded += 1;
-        await new Promise((resolve) => setTimeout(resolve, 60));
-      } catch (error) {
-        failed += 1;
-        console.warn(`Embedding failed for ${product.id}:`, {
-          message: error.message,
-        });
-      }
-    }
-
-    inventoryCache = { items: null, fetchedAt: 0 };
-
-    return jsonResponse(200, {
-      success: true,
-      embedded,
-      failed,
-      total: products.length,
-      embeddingModelId: BEDROCK_EMBEDDING_MODEL_ID,
-    });
-  } catch (error) {
-    console.error("embedProducts error:", error);
-    return jsonResponse(500, {
-      success: false,
-      message: "Failed to embed products",
-      error: error.message,
-    });
-  }
-};
+module.exports.embedProducts = async () => jsonResponse(200, {
+  success: true, embedded: 0, message: "The free deployment uses lexical catalog retrieval; no external embedding service is required."
+});
 
 module.exports.listNowProducts = async (event) => {
   try {

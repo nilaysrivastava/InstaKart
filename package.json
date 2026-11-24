@@ -1,0 +1,14 @@
+{
+  "name": "instakart",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "build": "npm ci --prefix frontend && npm ci --prefix backend && npm run build --prefix frontend",
+    "start": "NODE_ENV=production node server.js",
+    "dev": "node server.js",
+    "test": "npm test --prefix backend"
+  }
+}
