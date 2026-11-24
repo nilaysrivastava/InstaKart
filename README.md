@@ -7,7 +7,7 @@ Situation-aware quick commerce on Render and Supabase.
 
 Describe the moment. Compare three suggested carts. Check out essentials.
 
-[Deployment](https://instakart-nilay.onrender.com) · [Render dashboard](https://dashboard.render.com/web/srv-dc2l29cs728c73au35b0)
+[Live App](https://instakart-nilay.onrender.com) · [Render dashboard](https://dashboard.render.com/web/srv-dc2l29cs728c73au35b0)
 </div>
 
 ## Experience
@@ -86,6 +86,8 @@ Never put a secret key in a `NEXT_PUBLIC_` variable or a committed file. Public 
 
 In Supabase Auth, set the Site URL to the Render URL. Add the same URL and `http://localhost:3000` to the redirect allowlist. The sign-up dialog supports email OTP verification; configure the Confirm signup email template to include `{{ .Token }}`, or use the confirmation link and then sign in. Supabase's default email sender is restricted; configure a custom SMTP provider for unrestricted public signups.
 
+The deployed service is linked through a public repository URL. Render currently requires a manual deploy after pushes for this source type, even when the service reports auto-deploy enabled. Use **Manual Deploy → Deploy latest commit** in its dashboard, or the Render plugin. Connect the GitHub provider in Render to enable push-triggered deploys.
+
 ### Administrators
 
 Create a normal account, then use the Supabase Dashboard user editor or a server-only Auth Admin client to set:
@@ -130,8 +132,22 @@ npm audit --prefix frontend
 npm audit --prefix backend
 ```
 
-The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Live account isolation and UI checks use disposable test accounts.
+The backend tests exercise guest scenarios, budgets, people counts and unauthenticated access boundaries. Database integration validation checks canonical prices, stock deductions, oversell rejection and row-level database permissions. Database access tests simulate separate authenticated identities and roll back all fixtures. Signed-in customer/admin browser tests remain pending Supabase email setup.
 
 ## Free-plan operation
 
 Render Free services sleep after 15 minutes idle and can take about a minute to wake up. Free hours are shared across your workspace's web services. Supabase Free projects may pause after inactivity. No paid database, worker, persistent disk or AI service is required. Usage is subject to each provider's included limits; see [Render Free](https://render.com/docs/free) and [Supabase pricing](https://supabase.com/pricing).
+
+## Deployment verification — 24 November 2026
+
+The service is live on the Render Free plan in Singapore. The Supabase project is `rapspqgzwtyfiabsyker` in Mumbai.
+
+- Production build succeeded on Render, running Node.js 22.
+- Catalog API returned all 233 seeded products.
+- Guest recommendations passed three live scenarios, including a ₹500 cap and a group of four.
+- Missing and forged tokens were rejected; customer and admin routes enforce authentication.
+- Database tests verified private carts, prohibited inventory writes, canonical checkout prices, stock deduction, owner verification and oversell prevention.
+- The browser verified three cart modes and the sign-in prompt on a protected Add action.
+- Backend tests and frontend lint passed; frontend/backend audits and Supabase security advisor reported no findings.
+
+**Still pending:** Supabase Auth Site URL/redirects, signup email configuration, public signup delivery, administrator account assignment, and signed-in end-to-end shopping/admin tests. Complete dashboard authentication to finish these steps. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
