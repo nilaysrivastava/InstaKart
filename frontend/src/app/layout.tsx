@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://instakart.onrender.com"),
+  metadataBase: new URL("https://instakart-nilay.onrender.com"),
   title: "InstaKart",
   description: "Instant AI-powered cart for urgent shopping needs.",
   applicationName: "InstaKart",
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "InstaKart",
     description: "Instant AI-powered cart for urgent shopping needs.",
-    url: "https://instakart.onrender.com",
+    url: "https://instakart-nilay.onrender.com",
     siteName: "InstaKart",
     type: "website",
     images: [

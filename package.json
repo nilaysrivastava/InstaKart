@@ -6,9 +6,10 @@
     "node": "22.x"
   },
   "scripts": {
-    "build": "npm ci --prefix frontend && npm ci --prefix backend && npm run build --prefix frontend",
+    "build": "npx --yes npm@10.9.4 ci --prefix frontend && npx --yes npm@10.9.4 ci --prefix backend && npm run build --prefix frontend",
     "start": "NODE_ENV=production node server.js",
     "dev": "node server.js",
     "test": "npm test --prefix backend"
-  }
+  },
+  "packageManager": "npm@10.9.4"
 }

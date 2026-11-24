@@ -12,6 +12,11 @@ function friendlyAuthError(caught: unknown, mode: AuthMode) {
   const message =
     caught instanceof Error ? caught.message : "Authentication failed.";
   const normalized = message.toLowerCase();
+  if (normalized.includes("email address not authorized") || normalized.includes("error sending confirmation")) return "Account emails are temporarily unavailable. Please try again later.";
+  if (normalized.includes("invalid login credentials")) return "The email or password you entered is incorrect.";
+  if (normalized.includes("email not confirmed")) return "Please verify your email before signing in.";
+  if (normalized.includes("rate limit")) return "Too many attempts. Please wait a moment and try again.";
+
 
   if (
     normalized.includes("name.formatted") ||
@@ -362,6 +367,14 @@ export function AuthDialog({
                     ) : null}
                   </label>
                 )}
+
+                {mode === "confirm" ? (
+                  <p className="text-sm text-slate-500">
+                    Check your inbox for a verification code or confirmation link.
+                    If you received a link, open it, then{" "}
+                    <button type="button" onClick={() => switchMode("signin")} className="font-bold text-amber-700">sign in</button>.
+                  </p>
+                ) : null}
 
                 {error ? (
                   <p

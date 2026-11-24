@@ -6,6 +6,8 @@
 Situation-aware quick commerce on Render and Supabase.
 
 Describe the moment. Compare three suggested carts. Check out essentials.
+
+[Deployment](https://instakart-nilay.onrender.com) · [Render dashboard](https://dashboard.render.com/web/srv-dc2l29cs728c73au35b0)
 </div>
 
 ## Experience
