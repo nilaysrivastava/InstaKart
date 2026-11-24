@@ -24,6 +24,7 @@
     "@types/react-speech-recognition": "^3.9.6",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "picomatch": "4.0.7",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

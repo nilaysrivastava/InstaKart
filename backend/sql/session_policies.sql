@@ -11,11 +11,22 @@ begin
     raise exception 'Authenticated order owner required';
   end if;
   if p_order->>'entityType' is distinct from 'ORDER' then raise exception 'Invalid order type'; end if;
+  if jsonb_typeof(p_items) is distinct from 'array' then raise exception 'Invalid items'; end if;
   if jsonb_array_length(p_items) < 1 or jsonb_array_length(p_items) > 99
-     or mode not in ('fastest','bestValue','mostComplete')
+     or mode is null or mode not in ('fastest','bestValue','mostComplete')
      or nullif(p_order->>'userId','') is null then
     raise exception 'Invalid checkout';
   end if;
+  if jsonb_typeof(p_order->'plan') is distinct from 'object' then raise exception 'Invalid plan'; end if;
+  p_order := jsonb_build_object('id', 'order_' || gen_random_uuid()::text, 'entityType', 'ORDER',
+    'userId', auth.uid()::text, 'selectedMode', mode, 'plan', p_order->'plan', 'status', 'PLACED', 'createdAt', now());
+  if jsonb_typeof(p_order#>'{plan,cartModes}') is distinct from 'object' then
+    p_order := jsonb_set(p_order, '{plan,cartModes}', '{}'::jsonb);
+  end if;
+  if jsonb_typeof(p_order#>array['plan','cartModes',mode]) is distinct from 'object' then
+    p_order := jsonb_set(p_order, array['plan','cartModes',mode], '{}'::jsonb);
+  end if;
+  p_order := jsonb_set(p_order, '{plan,checkoutSummary}', '{}'::jsonb);
   for item in select value from jsonb_array_elements(p_items) order by value->>'productId' loop
     qty := (item->>'quantity')::integer;
     if qty < 1 or qty > 10000 then raise exception 'Invalid quantity'; end if;
@@ -33,6 +44,9 @@ begin
   p_order := jsonb_set(p_order, array['plan','cartModes', mode, 'items'], canonical);
   p_order := jsonb_set(p_order, '{plan,checkoutSummary,estimatedTotal}', to_jsonb(total));
   p_order := jsonb_set(p_order, '{plan,checkoutSummary,itemCount}', to_jsonb(count_items));
+  p_order := jsonb_set(p_order, '{plan,checkoutSummary,etaMinutes}',
+    (select to_jsonb(max((value->>'etaMinutes')::integer)) from jsonb_array_elements(canonical)));
+  p_order := jsonb_set(p_order, array['plan','cartModes',mode,'etaMinutes'], p_order#>'{plan,checkoutSummary,etaMinutes}');
   insert into public.commerce_entities(id, data) values(p_order->>'id', p_order);
   return p_order;
 end;

@@ -2493,14 +2493,16 @@ const buildDeterministicFallbackPlan = async ({
 }) => {
   const startedAt = Date.now();
   const metadata = inferFallbackNeedMetadata(userRequest, panicMode);
-  const peopleMatch = userRequest.match(/(?:for|serve|serving)\s+(\d+)\s*(?:people|persons|guests|friends)?/i);
-  const peopleCount = peopleMatch ? clampNumber(peopleMatch[1], 1, 30, 1) : 1;
-  const budgetMatch = userRequest.match(/(?:under|below|within|budget(?: of)?)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/i);
+  const peopleMatch = [...userRequest.matchAll(/(?:for|serve|serving)\s+(\d+)|\b(\d+)\s+(?:people|persons|guests|friends)/gi)].at(-1);
+  const peopleCount = peopleMatch ? clampNumber(peopleMatch[1] || peopleMatch[2], 1, 30, 1) : 1;
+  const budgetMatch = [...userRequest.matchAll(/(?:under|below|within|budget(?: of)?)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)/gi)].at(-1);
   const budgetLimit = budgetMatch ? Number(budgetMatch[1]) : Infinity;
 
+  const memory = userId ? await getUserMemory(userId) : {skippedProducts: []};
+  const skipped = new Set(memory.skippedProducts.map(name => String(name).toLowerCase()));
   const semanticCandidates = await getRelevantInventoryCandidates(
     userRequest,
-    inventory,
+    inventory.filter(product => !skipped.has(String(product.name).toLowerCase())),
     28
   );
   const scoredProducts = semanticCandidates

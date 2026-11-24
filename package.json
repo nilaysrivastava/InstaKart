@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": ">=22.13 <23"
   },
   "scripts": {
-    "build": "npx --yes npm@10.9.4 ci --prefix frontend && npx --yes npm@10.9.4 ci --prefix backend && npm run build --prefix frontend",
+    "build": "npx --yes npm@10.9.4 ci --include=dev --prefix frontend && npx --yes npm@10.9.4 ci --prefix backend && npm run build --prefix frontend",
     "start": "NODE_ENV=production node server.js",
     "dev": "node server.js",
     "test": "npm test --prefix backend"
