@@ -98,9 +98,17 @@ Create a normal account, then use the Supabase Dashboard user editor or a server
 
 Set this in **app metadata**, never user metadata. Sign out and back in after assignment. Customers cannot grant themselves admin access. The backend verifies the current user with Supabase on every protected request.
 
-### Optional generative AI
+### Generative AI (Groq)
 
-Set `AI_API_KEY`, `AI_BASE_URL` (an OpenAI-compatible API base), and `AI_MODEL` in Render, then redeploy. No key is needed for the built-in planner. Provider availability, free quotas and model names depend on your provider account. On provider failure the app falls back to inventory planning and rule-based insights.
+The deployment uses Groq’s OpenAI-compatible endpoint with these server-only Render variables:
+
+| Variable | Value |
+| --- | --- |
+| `AI_BASE_URL` | `https://api.groq.com/openai/v1` |
+| `AI_MODEL` | `openai/gpt-oss-120b` |
+| `AI_API_KEY` | Store the Groq key only in Render’s environment settings. |
+
+The GPT-OSS adapter uses low reasoning effort and reserves at least 4,096 completion tokens for reasoning plus the JSON answer; truncated or empty answers trigger the built-in fallback. The key is never exposed to the browser. Keep the Groq account on its free plan; usage is subject to account quotas. Live checks on 25 November 2026 verified a Groq-generated breakfast cart (₹308, about 5.2 seconds, valid inventory IDs) and a successful built-in fallback when the next request hit Groq HTTP 429. Free quotas can therefore limit back-to-back requests. See [`docs/groq-verification.json`](docs/groq-verification.json). Other OpenAI-compatible providers can use the same variables. Redeploy after changing them. No key is needed for the built-in planner. Provider availability, free quotas and model names depend on your provider account. On provider failure the app falls back to inventory planning and rule-based insights.
 
 ## Routes and API
 
@@ -159,4 +167,4 @@ The confirmation email uses [`supabase/templates/confirmation.html`](supabase/te
 
 No purchased domain is required for the current setup: the Brevo sender is verified by email, and Brevo rewrites the From address to a compliant managed address for freemail senders. Brevo documents this as a temporary compatibility measure; see [sender requirements](https://help.brevo.com/hc/en-us/articles/14925263522578). The [Free SMTP plan](https://www.brevo.com/free-smtp-server/) currently allows 300 emails/day. Check key expiry in Brevo when maintaining the service; its key-generation screen also states that keys expire after 90 days of inactivity. Rotate SMTP credentials directly in Supabase, never in public source or browser environment variables.
 
-No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Generative AI is intentionally deferred; the live app uses its built-in planner.
+No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Groq is configured server-side for generative planning; the built-in planner remains available when the provider fails or exceeds its response budget.

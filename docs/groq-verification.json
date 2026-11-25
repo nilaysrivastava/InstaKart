@@ -1,0 +1,46 @@
+{
+  "verifiedAt": "2026-11-25T14:28:17.107Z",
+  "provider": "Groq",
+  "model": "openai/gpt-oss-120b",
+  "url": "https://instakart-nilay.onrender.com",
+  "checks": [
+    {
+      "userRequest": "Breakfast for 4 people under 500 rupees",
+      "status": 200,
+      "durationMs": 5234,
+      "modelId": "openai/gpt-oss-120b",
+      "usedFallback": false,
+      "success": true,
+      "summary": {
+        "estimatedTotal": 308,
+        "itemCount": 4,
+        "etaMinutes": 10,
+        "oneTapMessage": "Review the breakfast rush cart and add it instantly."
+      },
+      "inventoryIdsValid": true,
+      "generativePass": true
+    },
+    {
+      "userRequest": "Guests arriving in 30 minutes; need snacks and drinks under 700 rupees",
+      "status": 200,
+      "durationMs": 1562,
+      "modelId": "built-in-inventory-planner",
+      "usedFallback": true,
+      "success": true,
+      "summary": {
+        "estimatedTotal": 365,
+        "itemCount": 4,
+        "etaMinutes": 12,
+        "oneTapMessage": "Review the guest hosting cart and add it instantly."
+      },
+      "inventoryIdsValid": true,
+      "generativePass": false,
+      "providerStatus": 429,
+      "rateLimitFallbackPass": true,
+      "providerEvidence": "Render application logs confirmed Model provider returned 429."
+    }
+  ],
+  "overallPass": true,
+  "deploymentId": "dep-dc3f05kipgvc738giiag",
+  "codeCommit": "68a37b40602a74d3c3867d7e5207e614773fdaf3"
+}
