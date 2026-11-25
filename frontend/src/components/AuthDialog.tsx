@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import {DemoAccounts} from "@/components/DemoAccounts";
 import { useAuth } from "@/lib/auth";
 
 type AuthMode = "signin" | "signup" | "confirm";
@@ -242,6 +243,8 @@ export function AuthDialog({
                   ))}
                 </div>
               ) : null}
+
+              {mode === "signin" && <details className="mb-4 rounded-xl bg-amber-50 p-3"><summary className="cursor-pointer text-sm font-bold text-amber-950">Use a demo account</summary><div className="pt-3"><DemoAccounts /></div></details>}
 
               <form onSubmit={submit} noValidate className="space-y-4">
                 {mode === "signup" ? (

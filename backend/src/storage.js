@@ -19,6 +19,7 @@ class QueryCommand { constructor(input) { this.input = input; } }
 class ScanCommand { constructor(input) { this.input = input; } }
 class TransactWriteCommand { constructor(input) { this.input = input; } }
 const docClient = {async send(command) {
+  if (require('./demo-storage').demoContext.getStore()) return require('./demo-storage').sendDemo(command);
   const db = getClient();
   const p = command.input;
   let result;

@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const { getClient, docClient, DeleteCommand, GetCommand, PutCommand, ScanCommand, QueryCommand, TransactWriteCommand } = require("./storage");
+const {demoContext} = require('./demo-storage');
 const { complete } = require("./ai");
 const ITEMS_TABLE = "commerce_entities";
 const AI_PLANNER_MODEL_ID = process.env.AI_MODEL || "built-in-inventory-planner";
@@ -41,7 +42,8 @@ const getAuthenticatedUser = async (event) => {
   const authorization = event.headers?.authorization || event.headers?.Authorization || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (!token) return null;
-  const {data, error} = await getClient().auth.getUser(token);
+  const demo = demoContext.getStore()?.user;
+  const {data, error} = demo ? {data: {user: demo}, error: null} : await getClient().auth.getUser(token);
   if (error || !data.user) return null;
   const user = data.user;
   return {userId: user.id, email: user.email || "", username: user.email || "", groups: Array.isArray(user.app_metadata?.groups) ? user.app_metadata.groups : []};
@@ -56,7 +58,7 @@ const unauthorizedResponse = () =>
 const getAdminUser = async (event) => {
   const user = await getAuthenticatedUser(event);
   if (!user) return null;
-  return user.groups.includes("admin") ? user : null;
+  return user.groups.includes("admin") || (demoContext.getStore() && user.groups.includes("demo_admin")) ? user : null;
 };
 
 const forbiddenResponse = () =>
@@ -388,7 +390,7 @@ const normalizeProducts = (products = []) =>
 const refreshInventoryCache = async () => {
   const products = await queryProducts(300);
   const inventory = normalizeProducts(products);
-  inventoryCache = {
+  if (!demoContext.getStore()) inventoryCache = {
     items: inventory,
     fetchedAt: Date.now(),
   };
@@ -396,6 +398,7 @@ const refreshInventoryCache = async () => {
 };
 
 const getInventory = async ({ forceRefresh = false } = {}) => {
+  if (demoContext.getStore()) return normalizeProducts(await queryProducts(300));
   const now = Date.now();
   const hasCache =
     Array.isArray(inventoryCache.items) && inventoryCache.items.length;

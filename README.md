@@ -88,6 +88,21 @@ In Supabase Auth, set the Site URL to the Render URL. Add the same URL and `http
 
 The deployed service is linked through a public repository URL. Render currently requires a manual deploy after pushes for this source type, even when the service reports auto-deploy enabled. Use **Manual Deploy → Deploy latest commit** in its dashboard, or the Render plugin. Connect the GitHub provider in Render to enable push-triggered deploys.
 
+### Public demo logins
+
+Visitors can see these credentials at the top of the live website and in the login dialog, or use the **Try demo user / Try demo admin** buttons.
+
+| Account | Email | Password |
+| --- | --- | --- |
+| Demo user | `demo.user@instakart.example` | `InstaKartUser!2026` |
+| Demo admin | `demo.admin@instakart.example` | `InstaKartAdmin!2026` |
+
+These passwords are intentionally public. Both accounts are pre-confirmed Supabase Auth identities. Their trusted app metadata contains `demo: true` and a `groups` array containing `demo_user` or `demo_admin`; neither has the live `admin` group. The private owner account remains a separate administrator.
+
+Demo users can plan, save carts, check out, view sample orders, track orders and submit feedback. Demo admins can also create, edit and delete sample inventory and view sample analytics. Each account has its own shared, disposable workspace seeded from the catalog; it resets after 30 minutes or a server restart. A demo never reads live orders or changes live stock. Visitors sharing one demo account share that account’s sample changes; use a personal signup for private shopping data.
+
+`backend/sql/demo_accounts.sql` installs restrictive RLS and a write trigger that also blocks direct demo checkout RPCs against live data, plus a guard against changing the published demo passwords/email. Apply it before provisioning demo identities. The server verifies each bearer token through Supabase before selecting the demo workspace. Demo credentials are not API keys and grant no Supabase Dashboard or owner access.
+
 ### Administrators
 
 Create a normal account, then use the Supabase Dashboard user editor or a server-only Auth Admin client to set:
@@ -167,4 +182,4 @@ The confirmation email uses [`supabase/templates/confirmation.html`](supabase/te
 
 No purchased domain is required for the current setup: the Brevo sender is verified by email, and Brevo rewrites the From address to a compliant managed address for freemail senders. Brevo documents this as a temporary compatibility measure; see [sender requirements](https://help.brevo.com/hc/en-us/articles/14925263522578). The [Free SMTP plan](https://www.brevo.com/free-smtp-server/) currently allows 300 emails/day. Check key expiry in Brevo when maintaining the service; its key-generation screen also states that keys expire after 90 days of inactivity. Rotate SMTP credentials directly in Supabase, never in public source or browser environment variables.
 
-No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Groq is configured server-side for generative planning; the built-in planner remains available when the provider fails or exceeds its response budget.
+The verified owner account has administrator access. Public demo accounts use isolated sample workspaces as described above. Groq is configured server-side for generative planning; the built-in planner remains available when the provider fails or exceeds its response budget.

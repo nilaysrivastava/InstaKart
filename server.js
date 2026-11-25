@@ -39,13 +39,12 @@ async function handleApi(req, res, url, route) {
   }
   const match = url.pathname.match(route[1]);
   const event = {body, headers: req.headers, queryStringParameters: Object.fromEntries(url.searchParams), pathParameters: route[3] ? {[route[3]]: decodeURIComponent(match[1])} : {}, requestContext: {}};
-  if (route[4]) {
-    const token = (req.headers.authorization || '').replace(/^Bearer /, '');
-    const {data, error} = await require('./backend/src/storage').getClient().auth.getUser(token);
-    if (error || !data.user?.app_metadata?.groups?.includes('admin')) return reply(403, {success: false, message: 'Administrator access is required.'});
-  }
   const token = (req.headers.authorization || '').startsWith('Bearer ') ? req.headers.authorization.slice(7) : undefined;
-  const result = await require('./backend/src/storage').requestAuth.run(token, () => handlers[route[2]](event));
+  const {data} = token ? await require('./backend/src/storage').getClient().auth.getUser(token) : {data: {user: null}};
+  if (route[4]) {
+    if (!data.user?.app_metadata?.groups?.includes('admin') || data.user?.app_metadata?.demo === true) return reply(403, {success: false, message: 'Administrator access is required.'});
+  }
+  const result = await require('./backend/src/storage').requestAuth.run(token, () => require('./backend/src/demo-storage').runDemo(data.user, () => handlers[route[2]](event)));
   res.writeHead(result.statusCode, {'Content-Type': 'application/json', 'Cache-Control': 'no-store'});
   res.end(result.body);
 }

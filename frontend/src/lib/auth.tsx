@@ -8,13 +8,13 @@ const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const missingConfig = [!url ? "NEXT_PUBLIC_SUPABASE_URL" : null, !key ? "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" : null].filter((x): x is string => Boolean(x));
 const supabase = url && key ? createClient(url, key) : null;
 
-export type AuthUser = { userId: string; username: string; email: string; groups: string[]; isAdmin: boolean };
-export function hasAdminGroup(groups: unknown) { return Array.isArray(groups) && groups.includes("admin"); }
+export type AuthUser = { userId: string; username: string; email: string; groups: string[]; isAdmin: boolean; isDemo: boolean };
+export function hasAdminGroup(groups: unknown) { return Array.isArray(groups) && (groups.includes("admin") || groups.includes("demo_admin")); }
 function authUser(user: User | null): AuthUser | null {
   if (!user) return null;
   // app_metadata is controlled by administrators; user_metadata is editable.
   const groups = Array.isArray(user.app_metadata?.groups) ? user.app_metadata.groups : [];
-  return {userId: user.id, username: user.user_metadata?.name || user.email || "", email: user.email || "", groups, isAdmin: hasAdminGroup(groups)};
+  return {userId: user.id, username: user.user_metadata?.name || user.email || "", email: user.email || "", groups, isAdmin: hasAdminGroup(groups), isDemo: user.app_metadata?.demo === true};
 }
 type AuthContextValue = {
   user: AuthUser | null; loading: boolean; configured: boolean; missingConfig: string[];
