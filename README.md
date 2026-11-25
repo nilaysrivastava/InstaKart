@@ -101,7 +101,7 @@ These passwords are intentionally public. Both accounts are pre-confirmed Supaba
 
 Demo users can plan, save carts, check out, view sample orders, track orders and submit feedback. Demo admins can also create, edit and delete sample inventory and view sample analytics. Each account has its own shared, disposable workspace seeded from the catalog; it resets after 30 minutes or a server restart. A demo never reads live orders or changes live stock. Visitors sharing one demo account share that account’s sample changes; use a personal signup for private shopping data.
 
-`backend/sql/demo_accounts.sql` installs restrictive RLS and a write trigger that also blocks direct demo checkout RPCs against live data, plus a guard against changing the published demo passwords/email. Apply it before provisioning demo identities. The server verifies each bearer token through Supabase before selecting the demo workspace. Demo credentials are not API keys and grant no Supabase Dashboard or owner access.
+`backend/sql/demo_accounts.sql` installs restrictive RLS and a write trigger that also blocks direct demo checkout RPCs against live data, plus a guard against changing the published demo passwords/email. Apply it before provisioning demo identities. The server verifies each bearer token through Supabase before selecting the demo workspace. Demo credentials are not API keys and grant no Supabase Dashboard or owner access. Verified on the live deployment: both logins and 20 API checks passed, including sample CRUD, checkout, order isolation, direct database/RPC denial and password protection. See [`docs/demo-verification.json`](docs/demo-verification.json).
 
 ### Administrators
 

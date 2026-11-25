@@ -1,0 +1,102 @@
+{
+  "verifiedAt": "2026-11-25T14:54:24.977Z",
+  "url": "https://instakart-nilay.onrender.com",
+  "allPassed": true,
+  "checks": [
+    {
+      "name": "Login demo.user@instakart.example",
+      "pass": true
+    },
+    {
+      "name": "Login demo.admin@instakart.example",
+      "pass": true
+    },
+    {
+      "name": "Demo catalogs load",
+      "pass": true
+    },
+    {
+      "name": "Demo customer cannot administer",
+      "pass": true
+    },
+    {
+      "name": "Demo admin edits inventory",
+      "pass": true
+    },
+    {
+      "name": "Demo edits isolated from user and live catalog",
+      "pass": true
+    },
+    {
+      "name": "Demo admin creates sample product",
+      "pass": true
+    },
+    {
+      "name": "Demo user saves cart",
+      "pass": true
+    },
+    {
+      "name": "Demo cart persists",
+      "pass": true
+    },
+    {
+      "name": "Demo user checkout canonicalizes prices",
+      "pass": true
+    },
+    {
+      "name": "Demo user order history",
+      "pass": true
+    },
+    {
+      "name": "Demo order tracking",
+      "pass": true
+    },
+    {
+      "name": "Other demo account cannot read order",
+      "pass": true
+    },
+    {
+      "name": "Demo admin analytics",
+      "pass": true
+    },
+    {
+      "name": "Demo admin deletes sample product",
+      "pass": true
+    },
+    {
+      "name": "Direct database access exposes no live rows",
+      "pass": true
+    },
+    {
+      "name": "Direct live checkout RPC blocked",
+      "pass": true
+    },
+    {
+      "name": "Published demo password cannot be changed",
+      "pass": true
+    },
+    {
+      "name": "Login demo.user@instakart.example",
+      "pass": true
+    },
+    {
+      "name": "Live stock and price unchanged",
+      "pass": true
+    }
+  ],
+  "deploymentId": "dep-dc3fc9dg1s2s73db0shg",
+  "backendTestsPassed": 10,
+  "frontendLintAndTypesPassed": true,
+  "databaseChecks": {
+    "directDemoReadRows": 0,
+    "directCheckoutRpcBlocked": true,
+    "demoHasLiveAdminRole": false
+  },
+  "securityAdvisor": {
+    "schemaFindings": [],
+    "existingAuthWarning": {
+      "name": "auth_leaked_password_protection",
+      "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+    }
+  }
+}
