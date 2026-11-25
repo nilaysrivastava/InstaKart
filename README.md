@@ -138,7 +138,7 @@ The backend tests exercise guest scenarios, budgets, people counts and unauthent
 
 Render Free services sleep after 15 minutes idle and can take about a minute to wake up. Free hours are shared across your workspace's web services. Supabase Free projects may pause after inactivity. No paid database, worker, persistent disk or AI service is required. Usage is subject to each provider's included limits; see [Render Free](https://render.com/docs/free) and [Supabase pricing](https://supabase.com/pricing).
 
-## Deployment verification — 24 November 2026
+## Deployment verification — 24–25 November 2026
 
 The service is live on the Render Free plan in Singapore. The Supabase project is `rapspqgzwtyfiabsyker` in Mumbai.
 
@@ -153,4 +153,10 @@ The service is live on the Render Free plan in Singapore. The Supabase project i
 
 **Authentication configuration:** The production Site URL and redirect allowlist are configured for https://instakart-nilay.onrender.com.
 
-**Still pending:** Custom SMTP and public signup email delivery. No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Supabase's built-in email sender only delivers to pre-authorized organization addresses; unrestricted public signup needs a custom SMTP sender. Generative AI is intentionally deferred; the live app uses its built-in planner.
+**Signup email delivery is configured and verified:** Supabase Auth sends through Brevo Free SMTP (`smtp-relay.brevo.com`, port `587`). A real public signup using an owner-controlled Gmail plus-address succeeded, and the owner confirmed that the branded confirmation email arrived in the Inbox on 25 November 2026. The temporary signup account was removed and cleanup verified.
+
+The confirmation email uses [`supabase/templates/confirmation.html`](supabase/templates/confirmation.html), with the subject **Confirm your InstaKart account**. It contains both the OTP used by the signup dialog and a confirmation link. Credentials are stored only in Supabase's SMTP settings.
+
+No purchased domain is required for the current setup: the Brevo sender is verified by email, and Brevo rewrites the From address to a compliant managed address for freemail senders. Brevo documents this as a temporary compatibility measure; see [sender requirements](https://help.brevo.com/hc/en-us/articles/14925263522578). The [Free SMTP plan](https://www.brevo.com/free-smtp-server/) currently allows 300 emails/day. Check key expiry in Brevo when maintaining the service; its key-generation screen also states that keys expire after 90 days of inactivity. Rotate SMTP credentials directly in Supabase, never in public source or browser environment variables.
+
+No permanent administrator account has been assigned; the owner can sign up and use the administrator setup instructions above. Generative AI is intentionally deferred; the live app uses its built-in planner.

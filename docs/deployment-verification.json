@@ -56,6 +56,23 @@
     }
   ],
   "fixtures": "Temporary accounts and products, removed after testing",
-  "emailDelivery": "Not tested; custom SMTP pending",
-  "cleanupVerified": true
+  "emailDelivery": "Verified in Inbox on 25 November 2026 through Brevo Free SMTP",
+  "cleanupVerified": true,
+  "smtpVerification": {
+    "provider": "Brevo Free",
+    "host": "smtp-relay.brevo.com",
+    "port": 587,
+    "testedAt": "2026-11-25T14:09:52.722Z",
+    "signupApiSucceeded": true,
+    "recipient": "Owner-controlled Gmail plus-address",
+    "deliveryEvidence": "Owner confirmed receipt in Inbox",
+    "confirmationSubject": "Confirm your InstaKart account",
+    "confirmationContains": [
+      "Verification OTP",
+      "Confirmation link"
+    ],
+    "purchasedDomainRequired": false,
+    "senderMode": "Verified freemail sender; Brevo-managed From address rewriting",
+    "temporaryTestUserRemoved": true
+  }
 }
